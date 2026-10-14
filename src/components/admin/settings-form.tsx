@@ -1,0 +1,121 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { RotateCcw, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Field, Input } from "@/components/ui/field";
+import { useToast } from "@/components/ui/toast";
+import { type SiteSettings, useAdmin } from "./admin-store";
+import { ConfirmModal, FormSection, PageTitle } from "./admin-ui";
+
+type Key = keyof SiteSettings;
+
+export function SettingsForm() {
+  const { data, saveSettings, reset } = useAdmin();
+  const toast = useToast();
+  const [form, setForm] = useState<SiteSettings>(data.settings);
+  const [errors, setErrors] = useState<Partial<Record<Key, string>>>({});
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  useEffect(() => setForm(data.settings), [data.settings]);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(data.settings);
+
+  function save(e: React.FormEvent) {
+    e.preventDefault();
+    const err: Partial<Record<Key, string>> = {};
+    if (!form.siteName.trim()) err.siteName = "Indique o nome do site.";
+    if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = "Indique um e-mail válido.";
+    if (form.phone.replace(/\D/g, "").length < 9) err.phone = "Indique um número válido.";
+    if (form.whatsapp && form.whatsapp.replace(/\D/g, "").length < 9) err.whatsapp = "Indique um número válido, com indicativo (+244).";
+    (["facebook", "instagram", "youtube", "tiktok"] as Key[]).forEach((k) => {
+      if (form[k] && !/^https?:\/\//.test(form[k])) err[k] = "O endereço deve começar por https://";
+    });
+    if (form.multicaixaEntity && !/^\d{5}$/.test(form.multicaixaEntity)) err.multicaixaEntity = "A entidade tem 5 dígitos.";
+    const iban = form.iban.replace(/\s/g, "");
+    if (iban && !/^AO\d{23}$/i.test(iban)) err.iban = "O IBAN angolano tem o formato AO06 seguido de 21 dígitos (25 caracteres).";
+    setErrors(err);
+    if (Object.keys(err).length) {
+      toast({ tone: "error", title: "Há campos por corrigir" });
+      return;
+    }
+    saveSettings(form);
+    toast({ title: "Definições guardadas" });
+  }
+
+  const f = (k: Key, label: string, opts: { type?: string; placeholder?: string; hint?: string; required?: boolean; className?: string } = {}) => (
+    <Field label={label} htmlFor={`st-${k}`} error={errors[k]} hint={opts.hint} required={opts.required} className={opts.className}>
+      <Input id={`st-${k}`} type={opts.type ?? "text"} value={form[k]} placeholder={opts.placeholder} onChange={(e) => setForm((s) => ({ ...s, [k]: e.target.value }))} aria-invalid={!!errors[k]} />
+    </Field>
+  );
+
+  return (
+    <form onSubmit={save} className="pb-4">
+      <PageTitle title="Definições" description="Informação geral do site, contactos e dados de pagamento." />
+      <div className="space-y-6">
+        <FormSection title="Site">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {f("siteName", "Nome do site", { required: true })}
+            {f("tagline", "Slogan")}
+          </div>
+        </FormSection>
+        <FormSection title="Contactos" description="Aparecem no rodapé, na página de ajuda e nos e-mails aos atletas.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {f("email", "E-mail", { type: "email", required: true })}
+            {f("phone", "Telefone / telemóvel", { type: "tel", required: true, placeholder: "+244 9XX XXX XXX" })}
+            {f("whatsapp", "WhatsApp", { type: "tel", placeholder: "+244 9XX XXX XXX", hint: "Número usado no botão flutuante de WhatsApp." })}
+            {f("address", "Morada")}
+          </div>
+        </FormSection>
+        <FormSection title="Redes sociais">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {f("facebook", "Facebook", { type: "url", placeholder: "https://facebook.com/…" })}
+            {f("instagram", "Instagram", { type: "url", placeholder: "https://instagram.com/…" })}
+            {f("youtube", "YouTube", { type: "url", placeholder: "https://youtube.com/@…" })}
+            {f("tiktok", "TikTok", { type: "url", placeholder: "https://tiktok.com/@…" })}
+          </div>
+        </FormSection>
+        <FormSection title="Dados de pagamento" description="Mostrados aos atletas para pagamento por referência ou transferência.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {f("multicaixaEntity", "Entidade Multicaixa", { placeholder: "11223", hint: "Para pagamentos por referência." })}
+            {f("bankName", "Banco")}
+            {f("iban", "IBAN", { placeholder: "AO06 0000 0000 0000 0000 0000 0", className: "sm:col-span-2" })}
+            {f("accountHolder", "Titular da conta")}
+          </div>
+        </FormSection>
+        <FormSection title="Dados de demonstração" description="O painel guarda as alterações neste navegador.">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-ink-600">Repor elimina todas as alterações e volta aos dados originais de demonstração.</p>
+            <Button variant="outline" onClick={() => setConfirmReset(true)}>
+              <RotateCcw /> Repor dados de demonstração
+            </Button>
+          </div>
+        </FormSection>
+      </div>
+
+      <div className="sticky bottom-0 z-20 -mx-4 mt-6 border-t border-ink-200 bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+        <div className="flex items-center justify-end gap-3">
+          {dirty && <span className="text-sm text-ink-500">Alterações por guardar</span>}
+          <Button variant="ghost" disabled={!dirty} onClick={() => (setForm(data.settings), setErrors({}))}>
+            Descartar
+          </Button>
+          <Button type="submit" disabled={!dirty}>
+            <Save /> Guardar
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmModal
+        open={confirmReset}
+        onClose={() => setConfirmReset(false)}
+        title="Repor dados de demonstração?"
+        description="Todas as alterações feitas no painel serão apagadas deste navegador."
+        confirmLabel="Repor dados"
+        onConfirm={() => {
+          reset();
+          toast({ title: "Dados de demonstração repostos" });
+        }}
+      />
+    </form>
+  );
+}

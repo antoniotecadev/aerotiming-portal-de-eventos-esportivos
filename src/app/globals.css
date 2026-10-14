@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@source not "../../_prototipo-vite";
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), var(--font-jakarta), ui-sans-serif, sans-serif;
+
+  /* Laranja energia — cor principal (botões, destaques) */
+  --color-brand-50: #fff4ed;
+  --color-brand-100: #ffe6d5;
+  --color-brand-200: #feccaa;
+  --color-brand-300: #fda974;
+  --color-brand-400: #fb7a3c;
+  --color-brand-500: #f95716;
+  --color-brand-600: #e23d0b;
+  --color-brand-700: #bb2d0b;
+  --color-brand-800: #952612;
+  --color-brand-900: #7a2212;
+
+  /* Azul-marinho — texto, fundos escuros */
+  --color-ink-50: #f6f7fb;
+  --color-ink-100: #eef1f7;
+  --color-ink-200: #dfe4ee;
+  --color-ink-300: #c2cadb;
+  --color-ink-400: #929eba;
+  --color-ink-500: #65739a;
+  --color-ink-600: #47557b;
+  --color-ink-700: #2d3b60;
+  --color-ink-800: #1a2747;
+  --color-ink-900: #0e1a33;
+  --color-ink-950: #070d1f;
+
+  /* Amarelo sol — acentos */
+  --color-sun-300: #ffd866;
+  --color-sun-400: #ffc21a;
+  --color-sun-500: #f5a800;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --shadow-card: 0 1px 2px rgb(14 26 51 / 0.04), 0 4px 16px -4px rgb(14 26 51 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(14 26 51 / 0.05), 0 16px 40px -12px rgb(14 26 51 / 0.22);
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-pop-in: pop-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink-50 text-ink-900 antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+  ::selection {
+    @apply bg-brand-200 text-ink-900;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility container-page {
+  @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

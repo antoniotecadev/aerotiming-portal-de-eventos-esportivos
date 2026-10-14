@@ -1,0 +1,215 @@
+// Modelos de dados do portal. Os dados são mock (ver src/lib/data);
+// quando o backend existir, estes tipos servem de contrato com a API.
+
+export type CategorySlug =
+  | "corrida"
+  | "ciclismo"
+  | "trail"
+  | "triatlo"
+  | "caminhada"
+  | "btt";
+
+export interface Category {
+  slug: CategorySlug;
+  name: string;
+  description: string;
+}
+
+export type EventStatus =
+  | "brevemente" // inscrições ainda não abriram
+  | "inscricoes-abertas"
+  | "ultimas-vagas"
+  | "esgotado"
+  | "a-decorrer"
+  | "terminado"
+  | "cancelado";
+
+export interface PriceTier {
+  label: string; // ex.: "1ª fase"
+  until: string; // ISO date (inclusive)
+  price: number; // Kz
+}
+
+export interface EventDistance {
+  id: string;
+  name: string; // ex.: "10 km Corrida"
+  distanceKm: number;
+  startTime: string; // HH:mm
+  tiers: PriceTier[];
+  totalSlots: number;
+  slotsTaken: number;
+  minAge: number;
+  elevationGain: number; // metros
+  timeLimit?: string; // ex.: "6h00"
+}
+
+export interface RoutePoint {
+  km: number;
+  name: string;
+  type: "partida" | "chegada" | "agua" | "abastecimento" | "medico" | "controlo";
+}
+
+export interface EventRoute {
+  distanceId: string;
+  description: string;
+  surface: string; // ex.: "Asfalto 100%"
+  // Caminho estilizado (coordenadas 0–100) usado para desenhar o mapa do percurso
+  path: [number, number][];
+  elevation: number[]; // altitude em metros, amostras ao longo do percurso
+  points: RoutePoint[];
+}
+
+export interface RegulationSection {
+  title: string;
+  items: string[];
+}
+
+export interface SportsEvent {
+  id: string;
+  slug: string;
+  title: string;
+  edition: number;
+  category: CategorySlug;
+  date: string; // ISO YYYY-MM-DD
+  startTime: string; // HH:mm (hora de Luanda, WAT)
+  province: string;
+  city: string;
+  venue: string;
+  address: string;
+  mapUrl: string;
+  poster: string; // cartaz (vertical)
+  cover: string; // imagem horizontal
+  status: EventStatus;
+  registrationOpens: string; // ISO
+  registrationCloses: string; // ISO
+  summary: string;
+  description: string[];
+  highlights: string[];
+  organizer: { name: string; phone: string; email: string };
+  distances: EventDistance[];
+  kit: {
+    pickup: { date: string; from: string; to: string }[];
+    location: string;
+    address: string;
+    items: string[];
+    notes: string[];
+  };
+  schedule: { time: string; activity: string }[];
+  regulation: RegulationSection[];
+  routes: EventRoute[];
+  sponsorIds: string[];
+  createdAt: string; // ISO — usado para "Adicionados recentemente"
+  featured?: boolean;
+}
+
+export type Gender = "M" | "F";
+
+export type PaymentStatus = "confirmado" | "pendente" | "cancelado";
+
+export interface Participant {
+  id: string;
+  eventSlug: string;
+  distanceId: string;
+  bib: string; // dorsal
+  name: string;
+  gender: Gender;
+  ageGroup: string; // ex.: "Sénior", "Veterano 40"
+  club: string;
+  province: string;
+  nationality: string;
+  paymentStatus: PaymentStatus;
+  registeredAt: string; // ISO
+}
+
+export type ResultStatus = "terminou" | "desistiu" | "desclassificado" | "nao-partiu";
+
+export interface RaceResult {
+  id: string;
+  eventSlug: string;
+  distanceId: string;
+  bib: string;
+  name: string;
+  gender: Gender;
+  ageGroup: string;
+  club: string;
+  nationality: string;
+  position: number | null; // geral
+  positionGender: number | null;
+  positionAgeGroup: number | null;
+  chipTime: string | null; // HH:MM:SS
+  gunTime: string | null;
+  pace: string | null; // min/km
+  status: ResultStatus;
+  splits: { label: string; time: string }[];
+}
+
+export type UserRole = "atleta" | "organizador" | "admin";
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserRole;
+  birthDate: string;
+  gender: Gender;
+  documentType: "BI" | "Passaporte";
+  documentNumber: string;
+  province: string;
+  city: string;
+  club: string;
+  tshirt: TShirtSize;
+  bloodType?: string;
+  emergencyContact: { name: string; phone: string; relation: string };
+  createdAt: string;
+  active: boolean;
+}
+
+export type TShirtSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
+
+export type PaymentMethod = "multicaixa-express" | "referencia" | "transferencia";
+
+export type RegistrationStatus = "confirmada" | "pagamento-pendente" | "cancelada";
+
+export interface Registration {
+  id: string;
+  code: string; // código da inscrição, ex.: AT-2026-00123
+  userId: string;
+  userName: string;
+  eventSlug: string;
+  distanceId: string;
+  bib: string;
+  status: RegistrationStatus;
+  tshirt: TShirtSize;
+  payment: {
+    method: PaymentMethod;
+    amount: number;
+    entity?: string;
+    reference?: string;
+    expiresAt?: string;
+    paidAt?: string;
+  };
+  kitStatus: "por-levantar" | "levantado";
+  createdAt: string;
+}
+
+export interface Banner {
+  id: string;
+  title: string;
+  subtitle: string;
+  image: string;
+  ctaLabel: string;
+  href: string;
+  kind: "evento" | "publicidade" | "memoria"; // memoria = fotos de edições anteriores
+  active: boolean;
+  order: number;
+}
+
+export interface Sponsor {
+  id: string;
+  name: string;
+  logo: string;
+  url: string;
+  tier: "principal" | "oficial" | "apoio";
+  active: boolean;
+}
