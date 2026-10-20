@@ -11,6 +11,10 @@ const check = (name: string, ok: boolean, info = "") => {
 };
 
 async function main() {
+  // Estes testes mexem em vagas e contadores: nunca na base de dados de produção
+  if ((await prisma.siteSetting.findUnique({ where: { key: "ambiente" } }))?.value === "producao") {
+    throw new Error("Esta base de dados é a de PRODUÇÃO (site_settings.ambiente). Corra os testes numa base de desenvolvimento.");
+  }
   // 1) Vagas com pedidos em simultâneo
   const dist = await prisma.eventDistance.findFirstOrThrow({ where: { event: { slug: "corrida-da-independencia-2026" }, code: "5k" } });
   await prisma.eventDistance.update({ where: { id: dist.id }, data: { totalSlots: dist.slotsTaken + 3 } });

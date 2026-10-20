@@ -63,6 +63,10 @@ async function main() {
   });
   console.log(`  modalidades: ${cats.count} criadas`);
 
+  // Marca de produção: o seed de demonstração e os testes recusam correr nesta base de dados
+  await prisma.siteSetting.upsert({ where: { key: "ambiente" }, create: { key: "ambiente", value: "producao" }, update: { value: "producao" } });
+  console.log("  marca de produção (site_settings.ambiente): ✔");
+
   const site = await prisma.siteSetting.findUnique({ where: { key: "site" } });
   if (!site) await prisma.siteSetting.create({ data: { key: "site", value: { siteName: "ConexãoSport", tagline: "Eventos desportivos em Angola" } } });
   console.log(`  definições do site: ${site ? "já existiam" : "criadas (só o nome)"}`);
