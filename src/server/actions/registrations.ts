@@ -7,6 +7,7 @@ import { today } from "@/lib/today";
 import type { PaymentAccounts, PaymentMethod } from "@/lib/types";
 import { getCurrentUser } from "../auth";
 import { toDay } from "../mappers";
+import { LIMITS, clientIp, hitAll, tooManyMessage } from "../rate-limit";
 import {
   ageGroupFor,
   ageOn,
@@ -78,6 +79,8 @@ const fail = (error: string, field?: string): RegistrationResult => ({ ok: false
 export async function createRegistration(input: RegistrationInput): Promise<RegistrationResult> {
   const user = await getCurrentUser();
   if (!user) return fail("Entre na sua conta para se inscrever.");
+  const limit = await hitAll([LIMITS.registrationUser, user.id], [LIMITS.registrationIp, await clientIp()]);
+  if (!limit.ok) return fail(tooManyMessage(limit.retryAfterSec));
 
   const parsed = schema.safeParse(input);
   if (!parsed.success) {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { purgeRateLimits } from "@/server/rate-limit";
 import { expireStaleRegistrations } from "@/server/registrations";
 
 /**
@@ -12,5 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
   const expired = await expireStaleRegistrations();
-  return NextResponse.json({ ok: true, expired });
+  // Aproveita para limpar os contadores antigos do limite de tentativas (7.9)
+  const { count: rateLimitsPurged } = await purgeRateLimits();
+  return NextResponse.json({ ok: true, expired, rateLimitsPurged });
 }

@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronRight, Flag, MapPin, RotateCcw, Search, SearchX, Trophy, UserSearch, X } from "lucide-react";
+import { CalendarDays, ChevronRight, Flag, MapPin, RotateCcw, Search, SearchX, Trophy, UserSearch } from "lucide-react";
 import type { Category, CategorySlug } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SearchBox } from "@/components/ui/pager";
+import { useUrlFilters } from "@/lib/use-url-filters";
 import { CATEGORY_TONE, CategoryIcon } from "@/components/events/category-icon";
 
 export interface ResultEventSummary {
@@ -39,14 +41,11 @@ export interface ResultIndexItem {
 
 export const normText = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
-/** Caixa "Procurar o meu resultado": pesquisa por nome ou dorsal em todas as provas. */
-export function FindMyResult({ index }: { index: ResultIndexItem[] }) {
-  const [q, setQ] = useState("");
-  const term = normText(q.trim());
-  const matches = useMemo(() => {
-    if (term.length < 2 && !/^\d+$/.test(term)) return [];
-    return index.filter((r) => r.bib === term || normText(r.name).includes(term)).slice(0, 8);
-  }, [index, term]);
+/** Caixa "Procurar o meu resultado": pesquisa no servidor (5.10) por nome ou dorsal em todas as provas publicadas. */
+export function FindMyResult({ matches }: { matches: ResultIndexItem[] }) {
+  const { params, set, pending } = useUrlFilters();
+  const q = params.get("procurar") ?? "";
+  const term = q.trim();
 
   return (
     <div className="rounded-2xl bg-white p-4 text-ink-900 shadow-lift sm:p-6">
@@ -59,26 +58,14 @@ export function FindMyResult({ index }: { index: ResultIndexItem[] }) {
           <p className="text-sm text-ink-500">Escreva o seu nome ou o número do dorsal.</p>
         </div>
       </div>
-      <form className="relative mt-4" onSubmit={(e) => e.preventDefault()} role="search">
-        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-ink-400" aria-hidden />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Ex.: Carlos Mendonça ou 3421"
-          className="pr-11 pl-11"
-          aria-label="Nome ou dorsal"
-        />
-        {q && (
-          <button type="button" onClick={() => setQ("")} className="absolute top-1/2 right-2 flex size-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100" aria-label="Limpar pesquisa">
-            <X className="size-4" />
-          </button>
-        )}
-      </form>
+      <div className="mt-4" role="search">
+        <SearchBox value={q} onSearch={(v) => set({ procurar: v })} placeholder="Ex.: Carlos Mendonça ou 3421" label="Nome ou dorsal" />
+      </div>
       {term && (
-        <div className="mt-3" aria-live="polite">
+        <div className={cn("mt-3 transition-opacity", pending && "opacity-60")} aria-live="polite">
           {matches.length === 0 ? (
             <p className="rounded-xl bg-ink-50 px-4 py-3 text-sm text-ink-600">
-              {term.length < 2 ? "Escreva pelo menos 2 letras." : "Não encontrámos ninguém com esse nome ou dorsal. Confirme a escrita e tente de novo."}
+              {pending ? "A procurar…" : term.length < 2 && !/^d+$/.test(term) ? "Escreva pelo menos 2 letras." : "Não encontrámos ninguém com esse nome ou dorsal. Confirme a escrita e tente de novo."}
             </p>
           ) : (
             <ul className="divide-y divide-ink-100 rounded-xl border border-ink-100">

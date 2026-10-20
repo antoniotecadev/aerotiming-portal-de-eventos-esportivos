@@ -536,6 +536,16 @@ model Result {
 
 // ───────────── Outros ─────────────
 
+/// Limite de tentativas (7.9): contador por chave (ex.: "login:email:ana@x.ao") numa janela de tempo fixa.
+model RateLimit {
+  key         String   @id
+  windowStart DateTime @map("window_start") @db.Timestamptz(3)
+  hits        Int      @default(0)
+
+  @@index([windowStart])
+  @@map("rate_limits")
+}
+
 /// Contadores atómicos: código das inscrições por ano (chave "registration:2026").
 model Counter {
   key   String @id

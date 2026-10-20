@@ -9,7 +9,7 @@ import {
 import { currentTier, isOpen, minPrice } from "@/lib/event-utils";
 import { today } from "@/lib/today";
 import { getEventBySlug } from "@/server/queries/events";
-import { listPublicParticipants } from "@/server/queries/registrations";
+import { getParticipantStats } from "@/server/queries/registrations";
 import { PAYMENT_STATUS, daysUntil, formatDate, formatDateShort, formatKm, formatKz, weekday } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -58,8 +58,7 @@ export default async function EventPage({ params }: Props) {
   const open = isOpen(event);
   const finished = event.status === "terminado";
   const days = daysUntil(event.date, TODAY);
-  const participants = await listPublicParticipants(event.slug);
-  const confirmed = participants.filter((p) => p.paymentStatus === "confirmado").length;
+  const stats = await getParticipantStats(event.id);
   const sponsors = event.sponsors ?? [];
   const href = `/eventos/${event.slug}`;
   const regHref = `${href}/inscricao`;
@@ -160,7 +159,7 @@ export default async function EventPage({ params }: Props) {
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <CTA className="sm:min-w-56" />
-                <ButtonLink href={`${href}/inscritos`} variant="outline" size="lg"><Users /> Ver inscritos ({participants.length})</ButtonLink>
+                <ButtonLink href={`${href}/inscritos`} variant="outline" size="lg"><Users /> Ver inscritos ({stats.total})</ButtonLink>
               </div>
               <div className="mt-5"><ShareButtons title={event.title} path={href} /></div>
             </div>
@@ -298,9 +297,9 @@ export default async function EventPage({ params }: Props) {
           <Section id="inscritos" title="Lista de inscritos" icon={<Users />} action={<ButtonLink href={`${href}/inscritos`} variant="outline" size="sm">Ver lista completa</ButtonLink>}>
             <div className="mb-4 grid grid-cols-3 gap-2 text-center">
               {[
-                { label: "Inscritos", value: participants.length },
-                { label: "Pagos", value: confirmed },
-                { label: "Províncias", value: new Set(participants.map((p) => p.province)).size },
+                { label: "Inscritos", value: stats.total },
+                { label: "Pagos", value: stats.confirmed },
+                { label: "Províncias", value: stats.provinces },
               ].map((s) => (
                 <div key={s.label} className="rounded-2xl bg-ink-50 p-3">
                   <p className="font-display text-3xl font-extrabold">{s.value}</p>
@@ -309,7 +308,7 @@ export default async function EventPage({ params }: Props) {
               ))}
             </div>
             <ul className="divide-y divide-ink-100">
-              {participants.slice(-6).reverse().map((p) => {
+              {stats.latest.map((p) => {
                 const ps = PAYMENT_STATUS[p.paymentStatus];
                 return (
                   <li key={p.id} className="flex items-center gap-3 py-3">
@@ -367,7 +366,7 @@ export default async function EventPage({ params }: Props) {
             <ul className="space-y-2 text-[15px] text-ink-700">
               <li className="flex items-center gap-2"><CalendarDays className="size-4.5 text-ink-400" />{formatDateShort(event.date)} · {event.startTime}</li>
               <li className="flex items-center gap-2"><MapPin className="size-4.5 text-ink-400" />{event.city}, {event.province}</li>
-              <li className="flex items-center gap-2"><Users className="size-4.5 text-ink-400" />{participants.length} inscritos</li>
+              <li className="flex items-center gap-2"><Users className="size-4.5 text-ink-400" />{stats.total} inscritos</li>
             </ul>
             <CTA className="w-full" />
             <p className="flex items-center justify-center gap-1.5 text-xs text-ink-500"><ShieldCheck className="size-4 text-emerald-600" /> Vaga reservada enquanto paga</p>

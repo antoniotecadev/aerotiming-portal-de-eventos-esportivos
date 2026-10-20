@@ -8,6 +8,7 @@ import { today } from "@/lib/today";
 import type { User } from "@/lib/types";
 import { getCurrentUser } from "../auth";
 import { mapProfile, profileInclude } from "../mappers";
+import { LIMITS, hitAll, tooManyMessage } from "../rate-limit";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; field?: string };
 
@@ -106,6 +107,8 @@ export async function changePassword(input: { current: string; password: string 
   if (!input.current) return { ok: false, error: "Escreva a palavra-passe que usa agora." };
   if ((input.password ?? "").length < 6) return { ok: false, error: "A nova palavra-passe precisa de ter pelo menos 6 caracteres." };
   if (input.password === input.current) return { ok: false, error: "A nova palavra-passe tem de ser diferente da actual." };
+  const limit = await hitAll([LIMITS.passwordUser, me.id]);
+  if (!limit.ok) return { ok: false, error: tooManyMessage(limit.retryAfterSec) };
 
   const supabase = await createClient();
   // Confirma a palavra-passe actual antes de a trocar

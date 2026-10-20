@@ -4,24 +4,26 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Ticket } from "lucide-react";
 import { isOpen } from "@/lib/event-utils";
 import { getEventBySlug } from "@/server/queries/events";
-import { listPublicParticipants } from "@/server/queries/registrations";
+import { getParticipantsView } from "@/server/queries/registrations";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/section-heading";
 import { ButtonLink } from "@/components/ui/button";
 import { ParticipantsTable } from "@/components/events/participants-table";
 
 type Props = { params: Promise<{ slug: string }> };
+type Search = { searchParams: Promise<{ q?: string; distancia?: string; sexo?: string; pagamento?: string; pagina?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const e = await getEventBySlug((await params).slug);
   return e ? { title: `Inscritos · ${e.title}` } : {};
 }
 
-export default async function ParticipantsPage({ params }: Props) {
+export default async function ParticipantsPage({ params, searchParams }: Props & Search) {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
   if (!event) notFound();
-  const participants = await listPublicParticipants(slug);
+  const sp = await searchParams;
+  const view = await getParticipantsView(event.id, { q: sp.q, distance: sp.distancia, gender: sp.sexo, pay: sp.pagamento, page: sp.pagina });
 
   return (
     <>
@@ -32,7 +34,7 @@ export default async function ParticipantsPage({ params }: Props) {
         </div>
       </PageHeader>
       <div className="container-page py-8 pb-28 lg:pb-12">
-        <ParticipantsTable participants={participants} distances={event.distances} />
+        <ParticipantsTable view={view} distances={event.distances} />
       </div>
     </>
   );

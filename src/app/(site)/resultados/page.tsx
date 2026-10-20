@@ -1,18 +1,19 @@
 import type { Metadata } from "next";
 import { listEventsWithResults } from "@/server/queries/events";
 import { listCategories } from "@/server/queries/catalog";
-import { listResultIndex } from "@/server/queries/results";
+import { searchPublishedResults } from "@/server/queries/results";
 import { formatKm } from "@/lib/format";
 import { PageHeader } from "@/components/ui/section-heading";
-import { FindMyResult, ResultsDirectory, type ResultEventSummary, type ResultIndexItem } from "@/components/results/results-directory";
+import { FindMyResult, ResultsDirectory, type ResultEventSummary } from "@/components/results/results-directory";
 
 export const metadata: Metadata = {
   title: "Resultados",
   description: "Classificações oficiais das provas cronometradas pela AeroTiming. Procure o seu tempo por nome ou dorsal.",
 };
 
-export default async function ResultsPage() {
-  const [withResults, categories, resultIndex] = await Promise.all([listEventsWithResults(), listCategories(), listResultIndex()]);
+export default async function ResultsPage({ searchParams }: { searchParams: Promise<{ procurar?: string }> }) {
+  const { procurar = "" } = await searchParams;
+  const [withResults, categories, matches] = await Promise.all([listEventsWithResults(), listCategories(), searchPublishedResults(procurar)]);
   const events: ResultEventSummary[] = withResults.map(({ event: e, finishers }) => ({
       slug: e.slug,
       title: e.title,
@@ -27,8 +28,6 @@ export default async function ResultsPage() {
       distances: e.distances.map((d) => formatKm(d.distanceKm)),
     }));
 
-  const index: ResultIndexItem[] = resultIndex;
-
   return (
     <>
       <PageHeader
@@ -37,7 +36,7 @@ export default async function ResultsPage() {
         description="Classificações oficiais com tempos de chip. Procure o seu nome ou dorsal para encontrar o seu tempo."
       >
         <div className="max-w-2xl">
-          <FindMyResult index={index} />
+          <FindMyResult matches={matches} />
         </div>
       </PageHeader>
       <div className="container-page py-8 sm:py-10">

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
+import { LIMITS, clientIp, hitAll, tooManyMessage } from "../rate-limit";
 
 export type AuthResult =
   | { ok: true; redirectTo?: string; needsConfirmation?: boolean }
@@ -58,6 +59,8 @@ const signInSchema = z.object({ email, password: z.string().min(1, { message: "E
 export async function signIn(input: { email: string; password: string; next?: string | null }): Promise<AuthResult> {
   const parsed = signInSchema.safeParse(input);
   if (!parsed.success) return firstIssue(parsed.error);
+  const limit = await hitAll([LIMITS.loginEmail, parsed.data.email], [LIMITS.loginIp, await clientIp()]);
+  if (!limit.ok) return { ok: false, error: tooManyMessage(limit.retryAfterSec) };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -87,6 +90,8 @@ const signUpSchema = z.object({
 export async function signUp(input: { name: string; email: string; password: string; next?: string | null }): Promise<AuthResult> {
   const parsed = signUpSchema.safeParse(input);
   if (!parsed.success) return firstIssue(parsed.error);
+  const limit = await hitAll([LIMITS.signupIp, await clientIp()]);
+  if (!limit.ok) return { ok: false, error: tooManyMessage(limit.retryAfterSec) };
   const next = safeNext(input.next) ?? "/perfil";
 
   const supabase = await createClient();
@@ -120,6 +125,8 @@ export async function signOut() {
 export async function requestPasswordReset(input: { email: string }): Promise<AuthResult> {
   const parsed = z.object({ email }).safeParse(input);
   if (!parsed.success) return firstIssue(parsed.error);
+  const limit = await hitAll([LIMITS.resetEmail, parsed.data.email], [LIMITS.resetIp, await clientIp()]);
+  if (!limit.ok) return { ok: false, error: tooManyMessage(limit.retryAfterSec) };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {

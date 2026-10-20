@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, CalendarDays, Info, MapPin } from "lucide-react";
 import { getEventBySlug } from "@/server/queries/events";
-import { listResults } from "@/server/queries/results";
-import { listPublicParticipants } from "@/server/queries/registrations";
+import { countFinishers, getResultsView } from "@/server/queries/results";
+import { countParticipants, getParticipantsView } from "@/server/queries/registrations";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
@@ -23,12 +23,21 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function EventResultsPage({ params }: { params: Promise<{ slug: string }> }) {
+type Search = { separador?: string; distancia?: string; q?: string; sexo?: string; escalao?: string; pagamento?: string; pagina?: string };
+
+export default async function EventResultsPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<Search> }) {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
   if (!event || !event.resultsPublished) notFound();
-  const [results, participants] = await Promise.all([listResults(slug), listPublicParticipants(slug)]);
-  if (results.length === 0) notFound();
+  const sp = await searchParams;
+  const tab = sp.separador === "inscritos" ? "inscritos" : "resultados";
+  // Só se carrega o separador aberto, e só a página pedida (5.10)
+  const [finishers, participantsCount, results, participants] = await Promise.all([
+    countFinishers(event.id),
+    countParticipants(event.id),
+    tab === "resultados" ? getResultsView(event, { distance: sp.distancia, q: sp.q, gender: sp.sexo, ageGroup: sp.escalao, page: sp.pagina }) : undefined,
+    tab === "inscritos" ? getParticipantsView(event.id, { distance: sp.distancia, q: sp.q, gender: sp.sexo, pay: sp.pagamento, page: sp.pagina }) : undefined,
+  ]);
   const info: ResultsEventInfo = {
     slug: event.slug,
     title: event.title,
@@ -66,7 +75,7 @@ export default async function EventResultsPage({ params }: { params: Promise<{ s
       </section>
       <div className="container-page py-8 sm:py-10">
         <Suspense fallback={<p className="py-10 text-center text-ink-500">A carregar resultados…</p>}>
-          <EventResults event={info} results={results} participants={participants} />
+          <EventResults event={info} tab={tab} counts={{ finishers, participants: participantsCount }} results={results} participants={participants} />
         </Suspense>
       </div>
     </>

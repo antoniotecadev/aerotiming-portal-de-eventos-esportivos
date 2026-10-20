@@ -1,5 +1,4 @@
-// Modelos de dados do portal. Os dados são mock (ver src/lib/data);
-// quando o backend existir, estes tipos servem de contrato com a API.
+// Modelos de dados do portal: contrato entre o servidor (src/server/mappers.ts, a partir da BD) e os componentes.
 
 export type CategorySlug =
   | "corrida"

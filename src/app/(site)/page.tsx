@@ -6,7 +6,7 @@ import { today } from "@/lib/today";
 import { daysUntil, formatDate, formatKz } from "@/lib/format";
 import { listEventsWithResults, listRecentEvents, listUpcomingEvents } from "@/server/queries/events";
 import { listActiveBanners, listActiveSponsors, listCategories } from "@/server/queries/catalog";
-import { listResults } from "@/server/queries/results";
+import { listPodium } from "@/server/queries/results";
 import { EventCard } from "@/components/events/event-card";
 import { CATEGORY_TONE, CategoryIcon } from "@/components/events/category-icon";
 import { HeroSearch } from "@/components/home/hero-search";
@@ -37,9 +37,7 @@ export default async function HomePage() {
   const recentIds = new Set(recent.map((e) => e.id));
   const upcoming = allUpcoming.filter((e) => !recentIds.has(e.id)).slice(0, 4);
   const lastRace = withResults[0]?.event;
-  const lastResults = lastRace
-    ? (await listResults(lastRace.slug)).filter((r) => r.distanceId === lastRace.distances[0]?.id && r.positionGender && r.positionGender <= 3)
-    : [];
+  const lastResults = lastRace?.distances[0] ? await listPodium(lastRace.slug, lastRace.distances[0].id) : [];
   const podium = (g: "M" | "F") => lastResults.filter((r) => r.gender === g).sort((a, b) => a.positionGender! - b.positionGender!);
   const days = featured ? daysUntil(featured.date, t) : 0;
   const cheapest = allUpcoming.flatMap((e) => e.distances.map((d) => d.tiers[0]?.price ?? 0)).filter(Boolean);

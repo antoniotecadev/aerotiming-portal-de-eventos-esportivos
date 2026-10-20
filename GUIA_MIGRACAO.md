@@ -35,9 +35,9 @@
 | 2 | Instalar e configurar o Prisma | ✅ Concluída |
 | 3 | Modelar a base de dados (schema) | ✅ Concluída |
 | 4 | Migrações, segurança da BD e seed | ✅ Concluída |
-| 5 | Camada de dados: trocar mock por queries reais | ✅ Concluída (5.10 adiada) |
+| 5 | Camada de dados: trocar mock por queries reais | ✅ Concluída |
 | 6 | Autenticação real (Supabase Auth) | ✅ Concluída (6.14 e permissões por evento ficam para a Fase 9) |
-| 7 | Inscrições reais | ✅ Concluída (7.9 adiada — D7) |
+| 7 | Inscrições reais | ✅ Concluída |
 | 8 | Pagamentos com confirmação manual (admin / organizador) | ✅ Concluída (página Inscrições do painel passa para a BD na Fase 9) |
 | 9 | Admin real + upload de ficheiros | ✅ Concluída (9.7 adiada) |
 | 10 | Resultados reais | ✅ Concluída (10.6 fica para o futuro) |
@@ -342,7 +342,7 @@ Mudanças em relação à primeira proposta, e porquê:
 - [x] **5.8** Tornar as páginas com dados **dinâmicas** (D4): retirar `generateStaticParams` e garantir que cada pedido lê a BD (ver nos docs do Next 16 a forma recomendada, ex.: `await connection()`). Um evento novo aparece logo ao recarregar a página. — ✅ 2026-10-20 (todas as páginas públicas aparecem como `ƒ` no build; testado: alterar um banner na BD aparece ao recarregar)
 - [x] **5.9** Criar `loading.tsx` e `error.tsx` nas rotas com dados (`/eventos`, `/eventos/[slug]`, `/resultados/[slug]`, `/calendario`). — ✅ 2026-10-20 (um `loading.tsx` e um `error.tsx` em `app/(site)/`, que cobrem todas as páginas públicas)
   > ℹ️ Com o ecrã de carregamento (streaming), uma página inexistente (ex.: `/eventos/nao-existe`) mostra "não encontrado" mas responde **200** em vez de 404. O Next injecta `noindex`, por isso os motores de pesquisa não a indexam. É o comportamento documentado do Next 16; manteve-se, porque o ecrã de carregamento é mais importante em redes móveis lentas.
-- [ ] ⏸️ **5.10** Paginação no servidor para inscritos e resultados (hoje vem tudo de uma vez).
+- [x] **5.10** Paginação no servidor para inscritos e resultados (hoje vem tudo de uma vez). — ✅ 2026-10-20 (páginas de 25 com filtros no URL: `/resultados/[slug]`, `/eventos/[slug]/inscritos` e "Procurar o meu resultado" em `/resultados`; pesquisa sem acentos com `public.search_norm` — migração `pesquisa_sem_acentos`, extensão `unaccent`; CSV gerado no servidor em `/api/resultados/[slug]/csv`; testado com 2000 resultados: cada página tem ~200 KB e 25 linhas. O **painel** de gestão continua a carregar todos os dados dos eventos do utilizador — ver 12.10)
   > ⏸️ Adiado: com os volumes actuais (~100 inscritos e ~100 resultados por evento) não é preciso. Fazer antes do primeiro evento grande (milhares de inscritos), incluindo a pesquisa "Procurar o meu resultado" (`listResultIndex` envia hoje todos os resultados para o browser).
 - [x] **5.11** Lista de províncias: manter como constante em código (não muda) — mover para `src/lib/constants.ts`. — ✅ 2026-10-20 (`src/lib/constants.ts`)
 - [x] **5.12** Quando nenhuma página pública importar `@/lib/data`: mover os mocks para `prisma/seed-data/` (só o seed os usa) e apagar `src/lib/data/`. — ✅ 2026-10-20 (mocks em `prisma/seed-data/`; gerador de percursos em `src/lib/route-helpers.ts`; nenhum ficheiro de `src/` importa dados de demonstração)
@@ -426,7 +426,7 @@ Mudanças em relação à primeira proposta, e porquê:
 - [x] **7.6** Bilhete com QR: o código QR contém o `code` da inscrição. Criar a página `/admin/checkin`, onde a equipa do levantamento do kit lê o QR e marca "Kit levantado". — ✅ 2026-10-20 — ⚠️ ficou em **`/checkin`** (página própria, pensada para telemóvel) e não em `/admin/checkin`, para o staff não precisar de acesso ao painel. Lê o QR com a câmara (BarcodeDetector: Chrome Android/Safari recente) ou o código/dorsal à mão; só entrega se o pagamento estiver confirmado; regista quem entregou (`audit_logs`). Acesso: admin + equipa do evento (`src/server/permissions.ts`)
 - [x] **7.7** Tarefa agendada que **expira** as inscrições com pagamento `pendente` (sem comprovativo) após um prazo configurável (ex.: 72 h) e liberta as vagas. Nunca expirar pagamentos `em_analise`, que aguardam o admin (Supabase Cron / `pg_cron`, ou um Cron do alojamento a chamar uma rota protegida). — ✅ 2026-10-20 (`expireStaleRegistrations()` corre antes de cada inscrição e na rota `GET /api/cron/expirar-inscricoes`, protegida com `CRON_SECRET`; `vercel.json` agenda-a 1× por dia — o plano gratuito da Vercel só permite diário. ℹ️ Na primeira execução expiraram 61 inscrições de demonstração cujo prazo já tinha passado)
 - [x] **7.8** Botão "Avisem-me quando abrir" grava um `EventAlert`. — ✅ 2026-10-20 (grava em `event_alerts`; o envio do aviso chega com a Fase 11)
-- [ ] ⏸️ **7.9** Proteção contra abuso (anti-bot, limite de tentativas) — adiado (D7).
+- [x] **7.9** Proteção contra abuso (anti-bot, limite de tentativas) — ✅ 2026-10-20 (só limite de tentativas, sem captcha: `src/server/rate-limit.ts` + tabela `rate_limits` — login 10/15 min por e-mail e 30/15 min por IP; criar conta 5/h por IP; recuperar palavra-passe 3/h por e-mail e 10/h por IP; mudar palavra-passe 5/15 min; inscrição 10/h por conta e 30/h por IP; contacto 10/h por IP. Contadores atómicos na BD; a tarefa agendada apaga os antigos. ⚠️ O IP vem de `x-forwarded-for`: só é fiável atrás do Vercel/proxy)
 ---
 - [x] **7.10** Testes automáticos da lógica de inscrições: `npm run test:registrations` (vagas em simultâneo, códigos únicos, dorsal, expiração) — ✅ 2026-10-20
 
@@ -449,12 +449,12 @@ Mudanças em relação à primeira proposta, e porquê:
 - [x] **8.7** Pagamento registado pelo admin/organizador para quem pagou presencialmente ou enviou por WhatsApp. — ✅ 2026-10-20 (é o próprio "Confirmar" do 8.5 — não é preciso anexar nada)
 - [x] **8.8** Exportação **CSV** dos pagamentos de um evento (código, atleta, telemóvel, distância, dorsal, método, valor, estado, nº operação, data de confirmação), para conferir com o extracto bancário. Os contadores por estado aparecem nos separadores. — ✅ 2026-10-20
   - [ ] Totais em Kz por método e por estado no topo da página (opcional).
-- [ ] **8.9** Adaptar o frontend (que simulava pagamento automático e "Referência Multicaixa"):
+- [x] **8.9** Adaptar o frontend (que simulava pagamento automático e "Referência Multicaixa"): — ✅ 2026-10-20 (último ponto fechado na Fase 9)
   - [x] `src/lib/types.ts` / `src/lib/format.ts` → 4 métodos manuais e estados do pagamento — ✅ 2026-10-20
   - [x] Assistente de inscrição → 4 métodos, ecrã final com instruções e botão WhatsApp — ✅ 2026-10-20
   - [x] Perfil (`registrations-list.tsx`, `profile-overview.tsx`) → "Como pagar", estado do pagamento e motivo da rejeição — ✅ 2026-10-20
   - [x] Textos: FAQ de pagamentos, termos, regulamento-base (e os 12 regulamentos já gravados na BD), "Como funciona" da Home e da Ajuda, nota de preços na página do evento — ✅ 2026-10-20
-  - [ ] `components/admin/registrations-manager.tsx` (página **Inscrições** do painel) ainda usa dados mock e tem um "Confirmar pagamento" falso → passa para a BD na **Fase 9**; até lá, usar **Pagamentos**. As definições de pagamento do `settings-form.tsx` foram substituídas por `/admin/pagamentos/contas`.
+  - [x] `components/admin/registrations-manager.tsx` (página **Inscrições** do painel) ainda usa dados mock e tem um "Confirmar pagamento" falso → passa para a BD na **Fase 9**; até lá, usar **Pagamentos**. — ✅ 2026-10-20 (Fase 9: dados reais e "Confirmar pagamento" real, com dorsal) As definições de pagamento do `settings-form.tsx` foram substituídas por `/admin/pagamentos/contas`.
 - [x] **8.10** Testes ponta a ponta no browser: inscrição → botão WhatsApp com o número certo; "Recebi o comprovativo"; confirmação dupla em simultâneo; comprovativo repetido; rejeição com motivo visível para o atleta; organizador só vê os seus eventos; WhatsApp próprio do evento; exportação CSV pelo admin. — ✅ 2026-10-20
 
 ### Futuro — pagamento automático (não fazer agora)
@@ -524,8 +524,9 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
 - [ ] **12.5** Conformidade com a **Lei n.º 22/11** (Protecção de Dados Pessoais): consentimento, finalidade, prazo de conservação dos dados de saúde, exportar e apagar os dados a pedido.
 - [ ] **12.6** Monitorização de erros (ex.: Sentry) e de desempenho; alertas quando houver pagamentos `em_analise` há mais de 24 h sem resposta do admin.
 - [ ] **12.7** Retirar tudo o que é demonstração: caixa de contas demo, dados fictícios (patrocinadores, NIF, contactos), aviso "Este site é uma demonstração".
-- [ ] **12.8** SEO: `sitemap.ts`, `robots.ts`, imagens Open Graph por evento.
+- [ ] **12.8** SEO: `sitemap.ts`, `robots.ts`, imagens Open Graph por evento. Corrigir as páginas "não encontrado" que respondem HTTP 200 em vez de 404 (efeito do `loading.tsx` no streaming).
 - [ ] **12.9** SMTP próprio no Supabase Auth e "Confirm email" activo em produção (o SMTP incluído só serve para testes).
+- [ ] **12.10** Painel de gestão: paginar no servidor as listas de inscrições e resultados (hoje `getAdminData` carrega tudo dos eventos do utilizador — pesado para o admin com muitos eventos grandes).
 
 ---
 
@@ -541,7 +542,7 @@ Regra do projecto: aplica-se sempre a **opção recomendada**, regista-se aqui c
 | D4 | Estratégia de cache | Páginas estáticas com revalidação após alterações no admin vs. renderização a pedido | ✅ 2026-10-20 (actualizada): **páginas sempre dinâmicas**, sem cache; o utilizador recarrega a página para ver os dados mais recentes. Mais simples: não há nada para invalidar. |
 | D5 | Papel "organizador" | Vê só os seus eventos? Pode confirmar pagamentos? | ✅ 2026-10-20 (actualizada): o organizador gere **os seus eventos** (os que tem em `event_staff`): dados, inscrições, **pagamentos**, kits e resultados. Não publica sozinho (D11). O papel `staff` só faz check-in. |
 | D6 | Inscrição sem conta | Permitir (menos fricção) ou exigir conta (mais controlo)? | ✅ 2026-10-20 (actualizada): **é preciso ter conta para se inscrever.** O registo pede só nome, e-mail e palavra-passe; os restantes dados são pedidos na 1.ª inscrição e reaproveitados. |
-| D7 | Anti-bot | Cloudflare Turnstile, hCaptcha ou só limite de tentativas | ⏸️ 2026-10-20: adiado — sem anti-bot nem limite de tentativas por agora. |
+| D7 | Anti-bot | Cloudflare Turnstile, hCaptcha ou só limite de tentativas | ✅ 2026-10-20: só limite de tentativas (7.9). Captcha só se aparecer abuso real. |
 | D8 | Escalões etários | Confirmar a tabela oficial com a Federação Angolana de Atletismo | ❌ 2026-10-20: descartado por agora — mantém-se a tabela de escalões actual (Júnior, Sénior, Veterano 35/45/55+), sem validação com a Federação. |
 | D9 | Contas de recebimento | Uma conta única da AeroTiming para todos os eventos, ou contas diferentes por evento/organizador? (Por omissão: única, em `SiteSetting`) | ✅ 2026-10-20 (actualizada): **contas por evento** (`Event.paymentAccounts`, as do organizador), com as **contas da AeroTiming como alternativa** (`site_settings`). Motivo: como o organizador confirma pagamentos (D10), o dinheiro tem de entrar numa conta que ele consegue consultar. |
 | D10 | Quem confirma pagamentos | Só o admin, ou também o organizador do evento? (ligado a D5) | ✅ 2026-10-20 (actualizada): **o admin e o organizador do evento** confirmam pagamentos. Fica registado quem confirmou (`confirmedById` + `audit_logs`). |
@@ -628,3 +629,5 @@ src/
 | 2026-10-20 | — | Fase 9 concluída: 9.8 caixa de mensagens do contacto (`/admin/mensagens`, promover a organizador) e 9.9 contactos/redes do site lidos de `site_settings`. Testado ponta a ponta (envio, validação, anti-robô, limite, promover, tratar/reabrir; alteração das Definições reflectida no site); dados de teste apagados. 9.7 continua adiada. |
 | 2026-10-20 | — | Fase 10: importação de resultados validada no servidor com pré-visualização (10.1), classificações recalculadas no servidor em cada gravação (10.2); 10.3 e 10.4 confirmadas. Testado ponta a ponta (CSV com erros e avisos, ligação às inscrições, edição, publicação, perfil do atleta, 2000 linhas); dados de teste apagados. Falta 10.5 (certificado PDF, opcional). |
 | 2026-10-20 | — | Fase 10 concluída: certificado de finisher em PDF gerado no servidor (10.5), `/api/certificados/[id]`. Testado: PDF de finisher, 404 para não-finisher/evento não publicado/id inexistente, nomes com letras não latinas. |
+| 2026-10-20 | — | Fase 11 mantém-se adiada (decisão do responsável): segue-se a Fase 12. Revisão do guia antes da Fase 12: 8.9 fechada (já feita na Fase 9); 12.8 inclui corrigir o HTTP 200 nas páginas "não encontrado". |
+| 2026-10-20 | — | 5.10 e 7.9 feitas antes da Fase 12 (pedido do responsável). Migrações novas: `pesquisa_sem_acentos` (extensão `unaccent` + `public.search_norm`) e `limite_tentativas` (tabela `rate_limits`, RLS ligado). Aplicadas com `migrate deploy` (o `migrate dev` não corre sem terminal interactivo). Nova tarefa 12.10 (paginação no painel). |

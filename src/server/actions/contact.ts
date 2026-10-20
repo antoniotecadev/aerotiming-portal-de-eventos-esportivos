@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { CONTACT_SUBJECTS } from "@/lib/contact";
 import { getCurrentUser, hasRole } from "../auth";
+import { LIMITS, clientIp, hitAll, tooManyMessage } from "../rate-limit";
 
 type Result = { ok: true; message?: string } | { ok: false; error: string };
 
@@ -27,6 +28,8 @@ export async function sendContactMessage(input: z.input<typeof messageSchema>): 
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0].message };
   const { website, ...data } = parsed.data;
   if (website) return { ok: true }; // robô: finge que correu bem
+  const limit = await hitAll([LIMITS.contactIp, await clientIp()]);
+  if (!limit.ok) return { ok: false, error: tooManyMessage(limit.retryAfterSec) };
 
   // Limite simples contra repetições: 3 mensagens por e-mail em 10 minutos
   const recent = await prisma.contactMessage.count({ where: { email: data.email, createdAt: { gte: new Date(Date.now() - 10 * 60_000) } } });
