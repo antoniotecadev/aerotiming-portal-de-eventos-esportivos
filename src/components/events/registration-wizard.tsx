@@ -78,8 +78,8 @@ function downloadIcs(event: SportsEvent) {
   const d = event.date.replace(/-/g, "");
   const t = event.startTime.replace(":", "");
   const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AeroTiming//PT", "BEGIN:VEVENT",
-    `UID:${event.slug}@aerotiming.ao`, `DTSTART;TZID=Africa/Luanda:${d}T${t}00`, `DTEND;TZID=Africa/Luanda:${d}T${String(Number(t.slice(0, 2)) + 4).padStart(2, "0")}${t.slice(2)}00`,
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//ConexaoSport//PT", "BEGIN:VEVENT",
+    `UID:${event.slug}@conexaosport.ao`, `DTSTART;TZID=Africa/Luanda:${d}T${t}00`, `DTEND;TZID=Africa/Luanda:${d}T${String(Number(t.slice(0, 2)) + 4).padStart(2, "0")}${t.slice(2)}00`,
     `SUMMARY:${event.title}`, `LOCATION:${event.venue}, ${event.city}`, "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));

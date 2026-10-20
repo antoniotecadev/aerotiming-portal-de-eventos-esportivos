@@ -183,7 +183,7 @@ export type PaymentMethod = "multicaixa-express" | "transferencia" | "deposito" 
 /** Estado de um pagamento manual. */
 export type PaymentState = "pendente" | "em-analise" | "confirmado" | "rejeitado" | "expirado" | "cancelado" | "reembolsado";
 
-/** Contas para onde o atleta paga (do evento ou, por omissão, da AeroTiming). */
+/** Contas para onde o atleta paga (do evento ou, por omissão, da ConexãoSport). */
 export interface PaymentAccounts {
   iban: { bank: string; holder: string; iban: string }[];
   multicaixaExpress?: { phone: string; holder: string };
@@ -198,7 +198,7 @@ export type RegistrationStatus = "confirmada" | "pagamento-pendente" | "cancelad
 
 export interface Registration {
   id: string;
-  code: string; // código da inscrição, ex.: AT-2026-00123
+  code: string; // código da inscrição, ex.: CS-2026-00123
   userId: string;
   userName: string;
   eventSlug: string;

@@ -160,10 +160,10 @@ async function seedCatalog() {
     {
       key: "payment_accounts",
       value: {
-        // Dados FICTÍCIOS — substituir pelas contas reais da AeroTiming no painel (Definições)
-        iban: [{ bank: "Banco Palanca", holder: "AeroTiming, Lda.", iban: "AO06 0040 0000 1234 5678 1019 0" }],
-        multicaixaExpress: { phone: "+244923000000", holder: "AeroTiming, Lda." },
-        kwik: { id: "923000000", holder: "AeroTiming, Lda." },
+        // Dados FICTÍCIOS — substituir pelas contas reais da ConexãoSport no painel (Definições)
+        iban: [{ bank: "Banco Palanca", holder: "ConexãoSport, Lda.", iban: "AO06 0040 0000 1234 5678 1019 0" }],
+        multicaixaExpress: { phone: "+244923000000", holder: "ConexãoSport, Lda." },
+        kwik: { id: "923000000", holder: "ConexãoSport, Lda." },
         depositInstructions: "Depósito em qualquer balcão do Banco Palanca, para o IBAN indicado. Escreva o código da inscrição no talão.",
         whatsapp: "244923000000", // para onde os atletas enviam o comprovativo
         proofDeadlineHours: 72,
@@ -173,9 +173,9 @@ async function seedCatalog() {
     {
       key: "site",
       value: {
-        siteName: "AeroTiming",
+        siteName: "ConexãoSport",
         tagline: "Eventos desportivos em Angola",
-        email: "geral@aerotiming.ao",
+        email: "geral@conexaosport.ao",
         phone: "+244 923 000 000",
         whatsapp: "+244 923 000 000",
         address: "Talatona, Luanda — Angola",
@@ -325,7 +325,7 @@ async function seedRegistrations(adminId: string, athleteId: string) {
       ? demo.status === "confirmada" ? "confirmada" : demo.status === "cancelada" ? "cancelada" : "pagamento_pendente"
       : p.paymentStatus === "confirmado" ? "confirmada" : p.paymentStatus === "cancelado" ? "cancelada" : "pagamento_pendente";
 
-    const code = demo?.code ?? `AT-${p.registeredAt.slice(0, 4)}-${String(i + 1).padStart(5, "0")}`;
+    const code = demo?.code ?? `CS-${p.registeredAt.slice(0, 4)}-${String(i + 1).padStart(5, "0")}`;
     maxSeq = Math.max(maxSeq, Number(code.slice(-5)));
     const tier = priceAt(dist, p.registeredAt);
     const registeredAt = new Date(p.registeredAt);

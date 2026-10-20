@@ -9,6 +9,7 @@ import { today } from "@/lib/today";
 export const metadata: Metadata = {
   title: "Eventos",
   description: "Todas as corridas, caminhadas, provas de ciclismo, BTT, trail e triatlo em Angola.",
+  alternates: { canonical: "/eventos" },
 };
 
 export default async function EventsPage() {

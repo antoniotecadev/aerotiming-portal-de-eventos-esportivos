@@ -19,14 +19,14 @@ export interface SiteSettings {
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: "AeroTiming",
+  siteName: "ConexãoSport",
   tagline: "Eventos desportivos em Angola",
-  email: "geral@aerotiming.ao",
+  email: "geral@conexaosport.ao",
   phone: "+244 923 000 000",
   whatsapp: "+244 923 000 000",
   address: "Talatona, Luanda — Angola",
-  facebook: "https://facebook.com/aerotiming",
-  instagram: "https://instagram.com/aerotiming",
+  facebook: "https://facebook.com/conexaosport",
+  instagram: "https://instagram.com/conexaosport",
   youtube: "",
   tiktok: "",
   linkedin: "",

@@ -61,3 +61,13 @@ export async function listEventsWithResults() {
   });
   return rows.map((r) => ({ event: mapEvent(r, t), finishers: r._count.results }));
 }
+
+/** Para o sitemap (12.8): eventos públicos com a data da última alteração e se têm resultados publicados. */
+export async function listSitemapEvents() {
+  await connection();
+  return prisma.event.findMany({
+    where: { status: { notIn: ["rascunho", "cancelado"] } },
+    select: { slug: true, updatedAt: true, date: true, resultsPublished: true },
+    orderBy: { date: "desc" },
+  });
+}

@@ -104,7 +104,7 @@ export function ContactForm() {
         htmlFor="c-message"
         required
         error={errors.message}
-        hint={subject === "organizar" ? "Diga-nos o tipo de prova, a data, o local e quantos participantes espera." : "Se for sobre uma inscrição, indique o código (ex.: AT-2026-01234)."}
+        hint={subject === "organizar" ? "Diga-nos o tipo de prova, a data, o local e quantos participantes espera." : "Se for sobre uma inscrição, indique o código (ex.: CS-2026-01234)."}
       >
         <Textarea id="c-message" rows={5} value={message} onChange={(e) => setMessage(e.target.value)} aria-invalid={!!errors.message || undefined} />
       </Field>

@@ -71,14 +71,14 @@ export function PaymentAccountsEditor({
 
       <Field label="Que contas quer editar?" htmlFor="scope">
         <Select id="scope" value={scope} onChange={(e) => choose(e.target.value)}>
-          {isAdmin && <option value="">Contas da AeroTiming (usadas por omissão)</option>}
+          {isAdmin && <option value="">Contas da ConexãoSport (usadas por omissão)</option>}
           {events.map((e) => (
             <option key={e.id} value={e.id}>{e.title}{e.accounts ? " — contas próprias" : ""}</option>
           ))}
         </Select>
       </Field>
       {scope && !current?.accounts && (
-        <p className="rounded-xl bg-sky-50 p-4 text-[15px] text-sky-900 ring-1 ring-sky-200">Este evento usa as contas da AeroTiming. Ao guardar, passa a usar as contas abaixo.</p>
+        <p className="rounded-xl bg-sky-50 p-4 text-[15px] text-sky-900 ring-1 ring-sky-200">Este evento usa as contas da ConexãoSport. Ao guardar, passa a usar as contas abaixo.</p>
       )}
 
       <Card>
@@ -136,12 +136,12 @@ export function PaymentAccountsEditor({
               startTransition(async () => {
                 const res = await clearEventPaymentAccounts({ eventId: scope });
                 if (!res.ok) return toast({ title: "Não foi possível", description: res.error, tone: "error" });
-                toast({ title: "O evento volta a usar as contas da AeroTiming" });
+                toast({ title: "O evento volta a usar as contas da ConexãoSport" });
                 router.refresh();
               })
             }
           >
-            Usar as contas da AeroTiming
+            Usar as contas da ConexãoSport
           </Button>
         )}
         <Button size="lg" onClick={save} disabled={pending}><Save /> {pending ? "A guardar…" : "Guardar"}</Button>

@@ -55,7 +55,7 @@ export const FAQ: FaqGroup[] = [
         a: ["O pagamento é feito fora do site e confirmado pela organização do evento. A sua vaga fica reservada enquanto paga."],
         steps: [
           "No fim da inscrição escolha como quer pagar.",
-          "Pague o valor indicado para o número ou IBAN que aparece no ecrã, escrevendo o código da inscrição (ex.: AT-2026-01234) no descritivo.",
+          "Pague o valor indicado para o número ou IBAN que aparece no ecrã, escrevendo o código da inscrição (ex.: CS-2026-01234) no descritivo.",
           "Toque em «Enviar comprovativo pelo WhatsApp» e envie a foto do comprovativo à organização.",
           "Quando a organização confirmar, a inscrição fica «Confirmada» e recebe o seu dorsal em «As minhas inscrições».",
         ],

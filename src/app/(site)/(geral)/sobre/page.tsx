@@ -28,7 +28,7 @@ import { getSiteSettings } from "@/server/queries/site";
 
 export const metadata: Metadata = {
   title: "Sobre nós",
-  description: "A AeroTiming faz cronometragem electrónica e inscrições online para corridas, ciclismo, trail e caminhadas em Angola.",
+  description: "A ConexãoSport faz cronometragem electrónica e inscrições online para corridas, ciclismo, trail e caminhadas em Angola.",
 };
 
 const NUMBERS = [
@@ -88,7 +88,7 @@ export default async function SobrePage() {
           <SectionHeading eyebrow="Quem somos" title="Uma equipa angolana ao serviço do desporto" />
           <div className="mt-5 space-y-4 text-[17px] leading-relaxed text-ink-700">
             <p>
-              A AeroTiming nasceu em Luanda, criada por atletas e engenheiros que queriam acabar com as filas para inscrições, os papéis perdidos e os resultados que
+              A ConexãoSport nasceu em Luanda, criada por atletas e engenheiros que queriam acabar com as filas para inscrições, os papéis perdidos e os resultados que
               demoravam semanas a sair.
             </p>
             <p>

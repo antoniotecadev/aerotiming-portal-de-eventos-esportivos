@@ -34,14 +34,14 @@ export function releaseSlot(tx: Tx, distanceId: string) {
   return tx.$executeRaw`UPDATE event_distances SET slots_taken = GREATEST(slots_taken - 1, 0) WHERE id = ${distanceId}`;
 }
 
-/** Próximo código de inscrição do ano, sem repetições: AT-2026-00001. */
+/** Próximo código de inscrição do ano, sem repetições: CS-2026-00001. */
 export async function nextRegistrationCode(tx: Tx, year: string) {
   const key = `registration:${year}`;
   const [row] = await tx.$queryRaw<{ value: number }[]>`
     INSERT INTO counters (key, value) VALUES (${key}, 1)
     ON CONFLICT (key) DO UPDATE SET value = counters.value + 1
     RETURNING value`;
-  return `AT-${year}-${String(row.value).padStart(5, "0")}`;
+  return `CS-${year}-${String(row.value).padStart(5, "0")}`;
 }
 
 /**
@@ -90,7 +90,7 @@ export async function expireStaleRegistrations(filter: { distanceId?: string } =
   return stale.length;
 }
 
-/** Contas de recebimento do evento ou, se não tiver, as da AeroTiming (D9). */
+/** Contas de recebimento do evento ou, se não tiver, as da ConexãoSport (D9). */
 export async function paymentAccountsFor(eventId: string): Promise<PaymentAccounts> {
   const [event, setting] = await Promise.all([
     prisma.event.findUnique({ where: { id: eventId }, select: { paymentAccounts: true } }),

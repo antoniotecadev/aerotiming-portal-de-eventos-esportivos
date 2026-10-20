@@ -26,7 +26,7 @@ const COLUMNS = [
     ],
   },
   {
-    title: "AeroTiming",
+    title: "ConexãoSport",
     links: [
       { href: "/sobre", label: "Sobre nós" },
       { href: "/sobre#organizadores", label: "Organize o seu evento" },

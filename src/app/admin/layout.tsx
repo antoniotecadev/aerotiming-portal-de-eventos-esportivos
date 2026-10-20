@@ -6,7 +6,7 @@ import { getCurrentUser, hasRole } from "@/server/auth";
 import { getAdminData } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
-  title: { default: "Gestão", template: "%s · Gestão AeroTiming" },
+  title: { default: "Gestão", template: "%s · Gestão ConexãoSport" },
   robots: { index: false, follow: false },
 };
 

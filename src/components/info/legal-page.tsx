@@ -71,7 +71,7 @@ export function LegalPage({ title, description, updated, summary, sections }: { 
             <Link href="/contacto" className="font-semibold text-brand-700 hover:underline">
               Fale connosco
             </Link>{" "}
-            ou escreva para <a href="mailto:privacidade@aerotiming.ao" className="font-semibold text-brand-700 hover:underline">privacidade@aerotiming.ao</a>.
+            ou escreva para <a href="mailto:privacidade@conexaosport.ao" className="font-semibold text-brand-700 hover:underline">privacidade@conexaosport.ao</a>.
           </p>
         </article>
       </div>

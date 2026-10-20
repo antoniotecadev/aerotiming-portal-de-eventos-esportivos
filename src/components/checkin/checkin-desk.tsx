@@ -120,7 +120,7 @@ export function CheckInDesk({ events }: { events: DeskEvent[] }) {
           ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Código (AT-2026-…) ou dorsal"
+          placeholder="Código (CS-2026-…) ou dorsal"
           autoCapitalize="characters"
           className="h-14 min-w-0 flex-1 rounded-xl border border-ink-200 bg-white px-4 text-lg font-semibold tracking-wide uppercase focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 focus:outline-none"
           aria-label="Código da inscrição ou dorsal"

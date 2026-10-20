@@ -1,4 +1,4 @@
-// Schema da base de dados do AeroTiming (Supabase Postgres).
+// Schema da base de dados do ConexãoSport (Supabase Postgres).
 // Notas da revisão e decisões: GUIA_MIGRACAO.md → Fase 3.
 //
 // Convenções:
@@ -233,7 +233,7 @@ model Event {
   kitNotes           String[]    @map("kit_notes")
   regulationPdfUrl   String?     @map("regulation_pdf_url")
   /// Contas de recebimento do evento (IBAN, Multicaixa Express, KWiK, depósito) — D9.
-  /// null = usar as contas da AeroTiming (site_settings → payment_accounts).
+  /// null = usar as contas da ConexãoSport (site_settings → payment_accounts).
   paymentAccounts    Json?       @map("payment_accounts")
   featured           Boolean     @default(false)
   resultsPublished   Boolean     @default(false) @map("results_published")
@@ -467,7 +467,7 @@ model Registration {
 
 /// Pagamento com confirmação MANUAL (D1): o atleta paga fora do site e envia o comprovativo;
 /// o admin ou o organizador do evento confirma (D10). Contas de destino: Event.paymentAccounts
-/// ou, se vazio, as da AeroTiming em SiteSetting (D9).
+/// ou, se vazio, as da ConexãoSport em SiteSetting (D9).
 model Payment {
   id              String        @id @default(cuid())
   registrationId  String        @map("registration_id")

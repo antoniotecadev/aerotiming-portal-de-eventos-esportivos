@@ -1,6 +1,6 @@
 # Guia de migração — dos dados mock para base de dados real
 
-> **Objectivo:** passar o portal AeroTiming de dados mock para uma base de dados real (Supabase + Prisma), depois autenticação real, inscrições, pagamentos e admin — **um passo de cada vez**.
+> **Objectivo:** passar o portal **ConexãoSport** de dados mock para uma base de dados real (Supabase + Prisma), depois autenticação real, inscrições, pagamentos e admin — **um passo de cada vez**.
 >
 > Este ficheiro é a **fonte de verdade do progresso**. Quem abrir o projecto deve conseguir saber, só a olhar para aqui, o que já está feito e o que falta.
 
@@ -42,7 +42,7 @@
 | 9 | Admin real + upload de ficheiros | ✅ Concluída (9.7 adiada) |
 | 10 | Resultados reais | ✅ Concluída (10.6 fica para o futuro) |
 | 11 | Notificações (SMS / e-mail) | ⏸️ Adiada (D3) |
-| 12 | Produção: deploy, segurança e monitorização | ⬜ Por começar |
+| 12 | Produção: deploy, segurança e monitorização | 🟡 Em curso |
 
 Estados: ⬜ Por começar · 🟡 Em curso · ✅ Concluída · ⏸️ Adiada
 
@@ -131,7 +131,7 @@ Já feito. Fica aqui como referência do ponto de partida.
 
 ## Fase 1 — Preparar Supabase e variáveis de ambiente
 
-- [x] **1.1** Criar conta em [supabase.com](https://supabase.com) e um projecto `aerotiming` (ou `aerotiming-dev` para desenvolvimento). — ✅ 2026-10-20
+- [x] **1.1** Criar conta em [supabase.com](https://supabase.com) e um projecto `ConexãoSport` (ou `ConexãoSport-dev` para desenvolvimento). — ✅ 2026-10-20
   - Escolher a região disponível com menor latência para Angola (normalmente Europa Ocidental). Confirmar a lista de regiões no painel.
   - **Guardar a palavra-passe da base de dados** num gestor de senhas: não volta a ser mostrada.
 - [x] **1.2** Ambientes: por agora **só desenvolvimento**. O projecto Supabase actual é o de desenvolvimento. O projecto de produção será criado mais tarde, na tarefa **12.1**. Nunca testar migrações em produção. — ✅ 2026-10-20 (decisão)
@@ -247,7 +247,7 @@ SUPABASE_SECRET_KEY="sb_secret_..."   # só servidor
 ### Regras principais
 
 - **Uma tabela de inscrições:** `Participant` + `Registration` do mock juntam-se em `registrations`. Guarda uma cópia dos dados do atleta e tem `userId` opcional, para permitir inscrição sem conta (D6).
-- **Pagamentos manuais** em `payments`: `pendente → em_analise → confirmado | rejeitado` (D1, D10). As contas de recebimento são do evento (`events.payment_accounts`), com as da AeroTiming em `site_settings` como alternativa (D9).
+- **Pagamentos manuais** em `payments`: `pendente → em_analise → confirmado | rejeitado` (D1, D10). As contas de recebimento são do evento (`events.payment_accounts`), com as da ConexãoSport em `site_settings` como alternativa (D9).
 - **Tempos** em milissegundos (`chipTimeMs`, `gunTimeMs`); **preços** em Kz inteiros.
 - **Datas:** dias de calendário em `@db.Date`; instantes em `@db.Timestamptz(3)`. A hora de Luanda (WAT) é aplicada na formatação.
 - Nomes em `snake_case` na BD e `camelCase` no código.
@@ -368,11 +368,11 @@ Mudanças em relação à primeira proposta, e porquê:
   - [x] Site URL e Redirect URLs (`http://localhost:3000/**`; o domínio de produção na Fase 12) — ✅ 2026-10-20 (`http://localhost:3000` + `http://localhost:3000/**`; testado com um link de recuperação)
   - [ ] Modelos de e-mail **em português** (confirmação, recuperação de senha, mudança de e-mail)
     > 👤 Por fazer no painel (**Authentication → Emails → Reset Password**). Usar o formato `token_hash`, que funciona mesmo que a pessoa abra o e-mail noutro browser ou na app de e-mail do telemóvel (o modelo padrão, `{{ .ConfirmationURL }}`, só funciona no mesmo browser onde pediu a recuperação). Testado em 2026-10-20.
-    > - Assunto: `Redefinir a sua palavra-passe — AeroTiming`
+    > - Assunto: `Redefinir a sua palavra-passe — ConexãoSport`
     > - Corpo:
     >   ```html
     >   <h2>Redefinir palavra-passe</h2>
-    >   <p>Olá! Recebemos um pedido para criar uma nova palavra-passe para a sua conta AeroTiming.</p>
+    >   <p>Olá! Recebemos um pedido para criar uma nova palavra-passe para a sua conta ConexãoSport.</p>
     >   <p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=recovery&next=/nova-palavra-passe">Redefinir palavra-passe</a></p>
     >   <p>Se não foi você que pediu, ignore este e-mail — a sua palavra-passe não muda.</p>
     >   ```
@@ -440,7 +440,7 @@ Mudanças em relação à primeira proposta, e porquê:
 >
 > **Fluxo:** inscrição → `pendente` (vaga reservada, prazo a contar) → atleta paga e envia o comprovativo pelo WhatsApp → organizador marca *"Recebi o comprovativo"* (`em_analise`, o prazo pára) → **Confirmar** (`confirmado` → inscrição `confirmada` + dorsal) ou **Rejeitar** com motivo (`rejeitado`, novo prazo para pagar de novo).
 
-- [x] **8.1** Contas de recebimento **por evento** (`Event.paymentAccounts`) com as da AeroTiming como alternativa (`site_settings` → `payment_accounts`): IBAN(s), Multicaixa Express, KWiK, instruções de depósito, **WhatsApp para comprovativos** e prazo em horas. Editáveis em **`/admin/pagamentos/contas`** (admin: contas da AeroTiming e de todos os eventos; organizador: só os seus eventos). — ✅ 2026-10-20 (⚠️ as contas da AeroTiming gravadas pelo seed são **fictícias** — substituir pelas reais)
+- [x] **8.1** Contas de recebimento **por evento** (`Event.paymentAccounts`) com as da ConexãoSport como alternativa (`site_settings` → `payment_accounts`): IBAN(s), Multicaixa Express, KWiK, instruções de depósito, **WhatsApp para comprovativos** e prazo em horas. Editáveis em **`/admin/pagamentos/contas`** (admin: contas da ConexãoSport e de todos os eventos; organizador: só os seus eventos). — ✅ 2026-10-20 (⚠️ as contas da ConexãoSport gravadas pelo seed são **fictícias** — substituir pelas reais)
 - [x] **8.2** Criar o pagamento `pendente` na inscrição, com `reference` = código e prazo das contas do evento. — ✅ 2026-10-20 (dentro de `createRegistration`)
 - [x] **8.3** Ecrã **"Como pagar"** (fim da inscrição e perfil): valor, conta, código para o descritivo, botões "Copiar" e botão **"Enviar comprovativo pelo WhatsApp"** com mensagem pré-preenchida com o código. — ✅ 2026-10-20 (`src/components/payments/payment-instructions.tsx`)
 - [x] ❌ **8.4** ~~Envio do comprovativo pelo site (upload)~~ — **descartado (D12)**: o comprovativo vai pelo WhatsApp do organizador. As colunas `proof_url`/`proof_hash` ficam sem uso.
@@ -515,16 +515,17 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
 
 ---
 
-## Fase 12 — Produção: deploy, segurança e monitorização
+## Fase 12 — Produção: deploy, segurança e monitorização 🟡
 
-- [ ] **12.1** Criar o projecto Supabase de **produção** (`aerotiming-prod`), adiado da tarefa 1.2, e aplicar as migrações com `db:deploy`. Alojamento (o `.gitignore` já tem `.vercel`): configurar as variáveis de ambiente de produção e apontar para o projecto Supabase **prod**.
+- [ ] **12.1** Criar o projecto Supabase de **produção** (`ConexãoSport-prod`), adiado da tarefa 1.2, e aplicar as migrações com `db:deploy`. Alojamento (o `.gitignore` já tem `.vercel`): configurar as variáveis de ambiente de produção e apontar para o projecto Supabase **prod**.
 - [ ] **12.2** Pipeline de deploy: `prisma migrate deploy` antes do build (nunca `migrate dev` em produção).
 - [ ] **12.3** Backups da BD (plano do Supabase com *Point-in-Time Recovery*, ou dumps diários) e um teste de restauro.
 - [ ] **12.4** Revisão de segurança: RLS activo em todas as tabelas, nenhuma chave secreta no cliente, todas as Server Actions verificam permissões (incluindo o organizador só nos seus eventos).
 - [ ] **12.5** Conformidade com a **Lei n.º 22/11** (Protecção de Dados Pessoais): consentimento, finalidade, prazo de conservação dos dados de saúde, exportar e apagar os dados a pedido.
 - [ ] **12.6** Monitorização de erros (ex.: Sentry) e de desempenho; alertas quando houver pagamentos `em_analise` há mais de 24 h sem resposta do admin.
 - [ ] **12.7** Retirar tudo o que é demonstração: caixa de contas demo, dados fictícios (patrocinadores, NIF, contactos), aviso "Este site é uma demonstração".
-- [ ] **12.8** SEO: `sitemap.ts`, `robots.ts`, imagens Open Graph por evento. Corrigir as páginas "não encontrado" que respondem HTTP 200 em vez de 404 (efeito do `loading.tsx` no streaming).
+  > ⚠️ Mudança de nome para ConexãoSport (2026-10-20): o **nome legal** ("ConexãoSport, Lda."), o **NIF** e os e-mails `geral@`/`privacidade@conexaosport.ao` são **provisórios** — confirmar antes do lançamento (termos, privacidade, contas de recebimento e Definições).
+- [x] **12.8** SEO: `sitemap.ts`, `robots.ts`, imagens Open Graph por evento. Corrigir as páginas "não encontrado" que respondem HTTP 200 em vez de 404 (efeito do `loading.tsx` no streaming). — ✅ 2026-10-20 (`sitemap.xml` com páginas, eventos e resultados publicados; `robots.txt` bloqueia tudo fora de produção (`VERCEL_ENV`) e, em produção, as áreas privadas; imagens de partilha 1200×630 geradas (`src/server/og-image.tsx`, fonte Barlow Condensed em `src/server/og-assets/`) para o site, cada evento e os resultados; endereços canónicos nas páginas com filtros; dados estruturados schema.org/SportsEvent; favicons e `manifest`. 404 verdadeiro: páginas gerais passaram para o grupo `(site)/(geral)/` (com o `loading.tsx`) e `eventos/[slug]` e `resultados/[slug]` têm um `layout.tsx` que verifica o evento **antes** do streaming — testado com `next start`)
 - [ ] **12.9** SMTP próprio no Supabase Auth e "Confirm email" activo em produção (o SMTP incluído só serve para testes).
 - [ ] **12.10** Painel de gestão: paginar no servidor as listas de inscrições e resultados (hoje `getAdminData` carrega tudo dos eventos do utilizador — pesado para o admin com muitos eventos grandes).
 
@@ -544,7 +545,7 @@ Regra do projecto: aplica-se sempre a **opção recomendada**, regista-se aqui c
 | D6 | Inscrição sem conta | Permitir (menos fricção) ou exigir conta (mais controlo)? | ✅ 2026-10-20 (actualizada): **é preciso ter conta para se inscrever.** O registo pede só nome, e-mail e palavra-passe; os restantes dados são pedidos na 1.ª inscrição e reaproveitados. |
 | D7 | Anti-bot | Cloudflare Turnstile, hCaptcha ou só limite de tentativas | ✅ 2026-10-20: só limite de tentativas (7.9). Captcha só se aparecer abuso real. |
 | D8 | Escalões etários | Confirmar a tabela oficial com a Federação Angolana de Atletismo | ❌ 2026-10-20: descartado por agora — mantém-se a tabela de escalões actual (Júnior, Sénior, Veterano 35/45/55+), sem validação com a Federação. |
-| D9 | Contas de recebimento | Uma conta única da AeroTiming para todos os eventos, ou contas diferentes por evento/organizador? (Por omissão: única, em `SiteSetting`) | ✅ 2026-10-20 (actualizada): **contas por evento** (`Event.paymentAccounts`, as do organizador), com as **contas da AeroTiming como alternativa** (`site_settings`). Motivo: como o organizador confirma pagamentos (D10), o dinheiro tem de entrar numa conta que ele consegue consultar. |
+| D9 | Contas de recebimento | Uma conta única da ConexãoSport para todos os eventos, ou contas diferentes por evento/organizador? (Por omissão: única, em `SiteSetting`) | ✅ 2026-10-20 (actualizada): **contas por evento** (`Event.paymentAccounts`, as do organizador), com as **contas da ConexãoSport como alternativa** (`site_settings`). Motivo: como o organizador confirma pagamentos (D10), o dinheiro tem de entrar numa conta que ele consegue consultar. |
 | D10 | Quem confirma pagamentos | Só o admin, ou também o organizador do evento? (ligado a D5) | ✅ 2026-10-20 (actualizada): **o admin e o organizador do evento** confirmam pagamentos. Fica registado quem confirmou (`confirmedById` + `audit_logs`). |
 | D11 | Quem publica eventos | O organizador publica sozinho ou o admin aprova? | ✅ 2026-10-20 (recomendado): o organizador cria em rascunho e pede publicação; **o admin publica**. Evita eventos falsos a receber inscrições e dinheiro. |
 | D12 | Envio do comprovativo | Pelo site (upload) ou fora do site? | ✅ 2026-10-20 (decidido pelo responsável): **pelo WhatsApp do organizador**, fora do site. O site mostra o botão "Enviar comprovativo pelo WhatsApp" com o código; o organizador confirma no painel. Upload descartado. |
@@ -624,10 +625,12 @@ src/
 | 2026-10-20 | — | Fase 6: login real com Supabase Auth (e-mail + palavra-passe), sessão em cookies via `src/proxy.ts`, utilizador lido no servidor (`getClaims`), registo num só passo, recuperação por link de e-mail, perfil e segurança gravam na BD, apagar conta. Protecção no servidor de `/perfil` e `/admin` (organizador sem áreas de admin). Contas de demonstração antigas retiradas do login. |
 | 2026-10-20 | — | Fase 6 concluída: Site URL e Redirect URLs configuradas e "Confirm email" desligado em dev (feito pelo responsável). Fluxo de recuperação testado ponta a ponta com link `token_hash`; modelo de e-mail em português recomendado na 6.4. |
 | 2026-10-20 | — | Fase 7 concluída: inscrição real (exige conta; validação e preço no servidor; vagas e códigos atómicos), "Para mim / Para outra pessoa", "As minhas inscrições" com dados reais e cancelamento, check-in de kits em `/checkin`, expiração automática (`/api/cron/expirar-inscricoes` + `CRON_SECRET`), alertas de abertura. Adiantado da Fase 8: 4 métodos manuais e instruções de pagamento (8.2, 8.3, parte da 8.9). |
-| 2026-10-20 | — | Fase 8 concluída. Decisão D12: comprovativo pelo WhatsApp do organizador (sem upload). Página `/admin/pagamentos` (confirmar/rejeitar/"recebi o comprovativo"/CSV) e `/admin/pagamentos/contas` (contas e WhatsApp por evento ou da AeroTiming). Textos do site actualizados para pagamento manual. |
+| 2026-10-20 | — | Fase 8 concluída. Decisão D12: comprovativo pelo WhatsApp do organizador (sem upload). Página `/admin/pagamentos` (confirmar/rejeitar/"recebi o comprovativo"/CSV) e `/admin/pagamentos/contas` (contas e WhatsApp por evento ou da ConexãoSport). Textos do site actualizados para pagamento manual. |
 | 2026-10-20 | — | Fase 9: painel com dados reais (eventos, inscrições, resultados, utilizadores, banners, patrocinadores, categorias, definições) via `admin-store` + `adminMutate`; uploads para o Supabase Storage (bucket `media`); organizador só vê os seus eventos e cria em rascunho; mocks movidos para `prisma/seed-data/` (5.12). Testado: lista real, edição de evento reflectida no site, banner com imagem no Storage na Home. |
 | 2026-10-20 | — | Fase 9 concluída: 9.8 caixa de mensagens do contacto (`/admin/mensagens`, promover a organizador) e 9.9 contactos/redes do site lidos de `site_settings`. Testado ponta a ponta (envio, validação, anti-robô, limite, promover, tratar/reabrir; alteração das Definições reflectida no site); dados de teste apagados. 9.7 continua adiada. |
 | 2026-10-20 | — | Fase 10: importação de resultados validada no servidor com pré-visualização (10.1), classificações recalculadas no servidor em cada gravação (10.2); 10.3 e 10.4 confirmadas. Testado ponta a ponta (CSV com erros e avisos, ligação às inscrições, edição, publicação, perfil do atleta, 2000 linhas); dados de teste apagados. Falta 10.5 (certificado PDF, opcional). |
 | 2026-10-20 | — | Fase 10 concluída: certificado de finisher em PDF gerado no servidor (10.5), `/api/certificados/[id]`. Testado: PDF de finisher, 404 para não-finisher/evento não publicado/id inexistente, nomes com letras não latinas. |
 | 2026-10-20 | — | Fase 11 mantém-se adiada (decisão do responsável): segue-se a Fase 12. Revisão do guia antes da Fase 12: 8.9 fechada (já feita na Fase 9); 12.8 inclui corrigir o HTTP 200 nas páginas "não encontrado". |
 | 2026-10-20 | — | 5.10 e 7.9 feitas antes da Fase 12 (pedido do responsável). Migrações novas: `pesquisa_sem_acentos` (extensão `unaccent` + `public.search_norm`) e `limite_tentativas` (tabela `rate_limits`, RLS ligado). Aplicadas com `migrate deploy` (o `migrate dev` não corre sem terminal interactivo). Nova tarefa 12.10 (paginação no painel). |
+| 2026-10-20 | — | **Mudança de nome: Aerotiming → ConexãoSport** (decisão do responsável; o repositório e o projecto Vercel também mudam de nome). Textos, metadados, logótipo (símbolo de `public/favicon/` + nome em itálico, como em `public/logotipo-conexaosport.png`), favicons, `manifest.ts` e Definições na BD. Novos códigos de inscrição `CS-AAAA-NNNNN` (os `AT-` já emitidos continuam válidos). Nome legal, NIF e e-mails provisórios (12.7). As entradas antigas deste diário mantêm o nome antigo. |
+| 2026-10-20 | — | 12.8 SEO concluída. Rotas reorganizadas em `src/app/(site)/(geral)/` (sem mudar URLs) para os endereços de eventos inexistentes responderem HTTP 404. ⚠️ Definir `NEXT_PUBLIC_SITE_URL` com o domínio final em produção (sitemap, robots, canónicos, imagens de partilha, certificado). |

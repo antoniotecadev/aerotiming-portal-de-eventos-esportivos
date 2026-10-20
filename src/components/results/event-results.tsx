@@ -451,7 +451,7 @@ function CertificateModal({
             <div className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-sun-300/30" aria-hidden />
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-56 rounded-full bg-brand-200/30" aria-hidden />
             <div className="relative">
-              <p className="text-sm font-extrabold tracking-[0.3em] text-brand-600 uppercase">AeroTiming</p>
+              <p className="text-sm font-extrabold tracking-[0.3em] text-brand-600 uppercase">ConexãoSport</p>
               <h3 className="mt-2 font-display text-3xl font-extrabold tracking-wide text-ink-900 uppercase sm:text-4xl">Certificado de Finisher</h3>
               <p className="mt-4 text-ink-600">Certificamos que</p>
               <p className="mt-1 text-2xl font-extrabold text-ink-900 sm:text-3xl">{r.name}</p>
@@ -466,7 +466,7 @@ function CertificateModal({
                 <CertBox label={r.ageGroup} value={r.positionAgeGroup ? `${r.positionAgeGroup}.º` : "—"} />
               </div>
               <p className="mt-6 text-xs text-ink-500">Ritmo médio: {r.pace} min/km · Tempo oficial: {r.gunTime}</p>
-              <div className="mx-auto mt-6 w-48 border-t border-ink-300 pt-2 text-xs text-ink-500">Cronometragem oficial AeroTiming</div>
+              <div className="mx-auto mt-6 w-48 border-t border-ink-300 pt-2 text-xs text-ink-500">Cronometragem oficial ConexãoSport</div>
             </div>
           </div>
         </div>

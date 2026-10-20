@@ -1,4 +1,4 @@
-# AeroTiming — Portal de eventos desportivos (Angola)
+# ConexãoSport — Portal de eventos desportivos (Angola)
 
 Frontend em **Next.js 16 (App Router) + React 19 + Tailwind CSS 4 + TypeScript**.
 Todos os dados são **mock** (não há backend ainda). O protótipo antigo (Vite) está guardado em `_prototipo-vite/` só para referência.
@@ -16,7 +16,7 @@ npm run typecheck  # verificação de tipos
 | Perfil | E-mail | Palavra-passe |
 |---|---|---|
 | Atleta | `carlos@exemplo.ao` | `123456` |
-| Administrador | `admin@aerotiming.ao` | `admin123` |
+| Administrador | `admin@conexaosport.ao` | `admin123` |
 
 A sessão é simulada e fica no `localStorage` do browser. A data de "hoje" está fixa em **14/10/2026** (`TODAY` em `src/lib/data/index.ts`) para os dados mock fazerem sentido.
 

@@ -35,7 +35,7 @@ export function RecoverForm() {
           Se existir uma conta com <strong className="text-ink-900">{email.trim().toLowerCase()}</strong>, enviámos um link para criar uma nova palavra-passe.
         </p>
         <ol className="mx-auto mt-6 max-w-sm space-y-2 text-left text-[15px] text-ink-700">
-          <li>1. Abra a mensagem da AeroTiming.</li>
+          <li>1. Abra a mensagem da ConexãoSport.</li>
           <li>2. Toque em <strong>“Redefinir palavra-passe”</strong>.</li>
           <li>3. Escreva a nova palavra-passe.</li>
         </ol>

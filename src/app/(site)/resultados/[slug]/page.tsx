@@ -20,6 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: `Resultados · ${event.title}`,
     description: `Classificação oficial, pódio e tempos de chip de ${event.title} (${formatDate(event.date)}).`,
+    alternates: { canonical: `/resultados/${slug}` },
   };
 }
 

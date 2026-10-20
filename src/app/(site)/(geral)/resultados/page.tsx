@@ -8,7 +8,8 @@ import { FindMyResult, ResultsDirectory, type ResultEventSummary } from "@/compo
 
 export const metadata: Metadata = {
   title: "Resultados",
-  description: "Classificações oficiais das provas cronometradas pela AeroTiming. Procure o seu tempo por nome ou dorsal.",
+  description: "Classificações oficiais das provas cronometradas pela ConexãoSport. Procure o seu tempo por nome ou dorsal.",
+  alternates: { canonical: "/resultados" },
 };
 
 export default async function ResultsPage({ searchParams }: { searchParams: Promise<{ procurar?: string }> }) {

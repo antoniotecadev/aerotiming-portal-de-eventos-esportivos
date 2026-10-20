@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/info/legal-page";
 
-export const metadata: Metadata = { title: "Termos e condições", description: "Regras de utilização do site AeroTiming e das inscrições em eventos." };
+export const metadata: Metadata = { title: "Termos e condições", description: "Regras de utilização do site ConexãoSport e das inscrições em eventos." };
 
 export default function TermosPage() {
   return (
     <LegalPage
       title="Termos e condições"
-      description="As regras para usar o site AeroTiming e para se inscrever nos eventos."
+      description="As regras para usar o site ConexãoSport e para se inscrever nos eventos."
       updated="1 de Setembro de 2026"
       summary={[
         "Use dados verdadeiros quando criar conta ou se inscrever.",
@@ -20,8 +20,8 @@ export default function TermosPage() {
           id: "quem-somos",
           title: "Quem somos",
           body: [
-            "O site aerotiming.ao é gerido pela AeroTiming, Lda., com sede em Luanda, Angola (NIF 5000000000 — texto provisório). Prestamos serviços de inscrição online, cronometragem electrónica e publicação de resultados de eventos desportivos.",
-            "Em muitos eventos, a AeroTiming actua em nome do organizador da prova. O organizador é responsável pelo evento em si (percurso, segurança, prémios); a AeroTiming é responsável pela plataforma de inscrição e pela cronometragem.",
+            "O site conexaosport.ao é gerido pela ConexãoSport, Lda., com sede em Luanda, Angola (NIF 5000000000 — texto provisório). Prestamos serviços de inscrição online, cronometragem electrónica e publicação de resultados de eventos desportivos.",
+            "Em muitos eventos, a ConexãoSport actua em nome do organizador da prova. O organizador é responsável pelo evento em si (percurso, segurança, prémios); a ConexãoSport é responsável pela plataforma de inscrição e pela cronometragem.",
           ],
         },
         {
@@ -76,7 +76,7 @@ export default function TermosPage() {
           title: "Responsabilidade",
           body: [
             "Fazemos o possível para manter o site disponível e as informações correctas, mas não podemos garantir que o site funcione sempre sem interrupções.",
-            "A AeroTiming não é responsável por danos causados por uso indevido da conta, por falhas de terceiros (bancos, operadoras) ou por informações fornecidas pelos organizadores.",
+            "A ConexãoSport não é responsável por danos causados por uso indevido da conta, por falhas de terceiros (bancos, operadoras) ou por informações fornecidas pelos organizadores.",
           ],
         },
         {

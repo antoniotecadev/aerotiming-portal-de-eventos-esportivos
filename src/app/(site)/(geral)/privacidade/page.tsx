@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/info/legal-page";
 
-export const metadata: Metadata = { title: "Política de privacidade", description: "Como a AeroTiming recolhe, usa e protege os seus dados pessoais." };
+export const metadata: Metadata = { title: "Política de privacidade", description: "Como a ConexãoSport recolhe, usa e protege os seus dados pessoais." };
 
 export default function PrivacidadePage() {
   return (
@@ -20,8 +20,8 @@ export default function PrivacidadePage() {
           id: "responsavel",
           title: "Quem é o responsável pelos dados",
           body: [
-            "O responsável pelo tratamento dos dados é a AeroTiming, Lda., com sede em Luanda. Tratamos os seus dados de acordo com a Lei n.º 22/11, de 17 de Junho, Lei da Protecção de Dados Pessoais, e com as orientações da Agência de Protecção de Dados (APD).",
-            "Para qualquer questão sobre privacidade, escreva para privacidade@aerotiming.ao.",
+            "O responsável pelo tratamento dos dados é a ConexãoSport, Lda., com sede em Luanda. Tratamos os seus dados de acordo com a Lei n.º 22/11, de 17 de Junho, Lei da Protecção de Dados Pessoais, e com as orientações da Agência de Protecção de Dados (APD).",
+            "Para qualquer questão sobre privacidade, escreva para privacidade@conexaosport.ao.",
           ],
         },
         {
@@ -78,7 +78,7 @@ export default function PrivacidadePage() {
               "Opor-se ao uso dos dados para marketing, a qualquer momento.",
               "Apresentar queixa à Agência de Protecção de Dados (APD).",
             ],
-            "Pode exercer a maioria destes direitos na sua área pessoal, em «O meu perfil», ou escrevendo para privacidade@aerotiming.ao. Respondemos no prazo máximo de 30 dias.",
+            "Pode exercer a maioria destes direitos na sua área pessoal, em «O meu perfil», ou escrevendo para privacidade@conexaosport.ao. Respondemos no prazo máximo de 30 dias.",
           ],
         },
         {

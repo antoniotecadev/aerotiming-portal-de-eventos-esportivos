@@ -143,7 +143,7 @@ const accountsSchema = z.object({
 });
 export type PaymentAccountsInput = z.input<typeof accountsSchema>;
 
-/** Grava as contas da AeroTiming (eventId = null, só admin) ou as de um evento (admin ou organizador). */
+/** Grava as contas da ConexãoSport (eventId = null, só admin) ou as de um evento (admin ou organizador). */
 export async function savePaymentAccounts(input: { eventId: string | null; accounts: PaymentAccountsInput }): Promise<Result> {
   const user = await getCurrentUser();
   if (input.eventId ? !(await canManageEvent(user, input.eventId)) : !hasRole(user, "admin")) return { ok: false, error: "Sem permissão." };
@@ -166,7 +166,7 @@ export async function savePaymentAccounts(input: { eventId: string | null; accou
   return { ok: true };
 }
 
-/** Volta a usar as contas da AeroTiming num evento. */
+/** Volta a usar as contas da ConexãoSport num evento. */
 export async function clearEventPaymentAccounts(input: { eventId: string }): Promise<Result> {
   const user = await getCurrentUser();
   if (!(await canManageEvent(user, input.eventId))) return { ok: false, error: "Sem permissão." };

@@ -27,7 +27,7 @@ export function MyResults({ results }: { results: ResultWithEvent[] }) {
       <EmptyState
         icon={<Trophy />}
         title="Ainda não tem resultados"
-        description="Depois de terminar uma prova cronometrada pela AeroTiming, o seu tempo e a sua posição aparecem aqui automaticamente."
+        description="Depois de terminar uma prova cronometrada pela ConexãoSport, o seu tempo e a sua posição aparecem aqui automaticamente."
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <ButtonLink href="/eventos" size="lg">

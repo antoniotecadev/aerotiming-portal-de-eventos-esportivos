@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { changePassword, deleteAccount, updateNotifications } from "@/server/actions/profile";
 
 // "Novas provas e promoções" ainda não tem coluna na BD: fica no browser (Fase 11).
-const PREFS_KEY = "aerotiming:notificacoes";
+const PREFS_KEY = "conexaosport:notificacoes";
 type Prefs = { sms: boolean; email: boolean; whatsapp: boolean; news: boolean };
 const DEFAULT_PREFS: Prefs = { sms: true, email: true, whatsapp: false, news: false };
 

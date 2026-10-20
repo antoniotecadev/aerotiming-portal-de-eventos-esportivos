@@ -4,7 +4,7 @@ import { requireUser } from "@/server/auth";
 import { listMyRegistrations, listMyResults } from "@/server/queries/profile";
 
 export const metadata: Metadata = {
-  title: { default: "O meu perfil", template: "%s · O meu perfil · AeroTiming" },
+  title: { default: "O meu perfil", template: "%s · O meu perfil · ConexãoSport" },
   robots: { index: false },
 };
 

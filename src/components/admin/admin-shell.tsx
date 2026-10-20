@@ -105,10 +105,10 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <nav className="flex h-full flex-col bg-ink-900 text-ink-300" aria-label="Gestão">
       <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-5">
-        <Link href="/admin" className="flex items-center gap-2.5">
+        <Link href="/admin" className="flex items-center gap-2">
           <LogoMark className="size-8" />
-          <span className="font-display text-[22px] leading-none font-extrabold tracking-tight text-white uppercase">
-            Aero<span className="text-brand-500">Timing</span>
+          <span className="font-display text-[22px] leading-none font-extrabold tracking-tight text-white italic">
+            Conexão<span className="text-brand-500">Sport</span>
           </span>
           <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sun-400 uppercase">Gestão</span>
         </Link>

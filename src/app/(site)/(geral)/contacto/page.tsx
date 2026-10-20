@@ -10,7 +10,7 @@ import { getSiteSettings } from "@/server/queries/site";
 
 export const metadata: Metadata = {
   title: "Contacto",
-  description: "Fale com a AeroTiming por WhatsApp, telefone, e-mail ou visite-nos em Luanda.",
+  description: "Fale com a ConexãoSport por WhatsApp, telefone, e-mail ou visite-nos em Luanda.",
 };
 
 /** Canais de contacto a partir das Definições do painel (os que ficam em branco não aparecem). */

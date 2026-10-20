@@ -9,6 +9,7 @@ import {
 import { currentTier, isOpen, minPrice } from "@/lib/event-utils";
 import { today } from "@/lib/today";
 import { getEventBySlug } from "@/server/queries/events";
+import { eventJsonLd, jsonLdHtml } from "@/server/seo";
 import { getParticipantStats } from "@/server/queries/registrations";
 import { PAYMENT_STATUS, daysUntil, formatDate, formatDateShort, formatKm, formatKz, weekday } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -30,7 +31,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: e.title,
     description: `${formatDate(e.date)} · ${e.venue}, ${e.city}. ${e.summary}`,
-    openGraph: { images: [{ url: e.poster, width: 1080, height: 1528 }] },
+    alternates: { canonical: `/eventos/${e.slug}` },
+    // A imagem de partilha é gerada por opengraph-image.tsx (cartaz + título + data)
+    openGraph: { type: "website", title: e.title, description: e.summary, url: `/eventos/${e.slug}` },
   };
 }
 
@@ -94,6 +97,7 @@ export default async function EventPage({ params }: Props) {
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLdHtml(eventJsonLd(event))} />
       {/* TOPO */}
       <div className="border-b border-ink-200/70 bg-white">
         <div className="container-page py-6 sm:py-8">

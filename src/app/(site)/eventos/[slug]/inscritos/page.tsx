@@ -15,7 +15,7 @@ type Search = { searchParams: Promise<{ q?: string; distancia?: string; sexo?: s
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const e = await getEventBySlug((await params).slug);
-  return e ? { title: `Inscritos · ${e.title}` } : {};
+  return e ? { title: `Inscritos · ${e.title}`, alternates: { canonical: `/eventos/${e.slug}/inscritos` } } : {};
 }
 
 export default async function ParticipantsPage({ params, searchParams }: Props & Search) {

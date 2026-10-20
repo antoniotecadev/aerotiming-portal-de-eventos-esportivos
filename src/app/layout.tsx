@@ -10,12 +10,20 @@ const barlow = Barlow_Condensed({ subsets: ["latin"], weight: ["600", "700", "80
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: {
-    default: "AeroTiming — Eventos desportivos em Angola",
-    template: "%s · AeroTiming",
+    default: "ConexãoSport — Eventos desportivos em Angola",
+    template: "%s · ConexãoSport",
   },
   description:
     "Encontre corridas, caminhadas, ciclismo e trail em Angola. Inscreva-se em minutos, pague com Multicaixa e veja os seus resultados.",
-  openGraph: { locale: "pt_AO", type: "website", siteName: "AeroTiming" },
+  openGraph: { locale: "pt_AO", type: "website", siteName: "ConexãoSport" },
+  twitter: { card: "summary_large_image" },
+  icons: {
+    icon: [
+      { url: "/favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: { url: "/favicon/apple-touch-icon.png", sizes: "180x180" },
+  },
 };
 
 export const viewport: Viewport = {
