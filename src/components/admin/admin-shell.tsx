@@ -21,6 +21,7 @@ import {
   Timer,
   Users,
   PackageCheck,
+  Wallet,
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -29,13 +30,14 @@ import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { AdminStoreProvider, normalize, useAdmin } from "./admin-store";
+import { AdminStoreProvider, normalize, useAdmin , type AdminData } from "./admin-store";
 import { ConfirmModal } from "./admin-ui";
 
 const NAV = [
   { href: "/admin", label: "Painel", icon: LayoutDashboard },
   { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
   { href: "/admin/inscricoes", label: "Inscrições", icon: Ticket },
+  { href: "/admin/pagamentos", label: "Pagamentos", icon: Wallet },
   { href: "/admin/resultados", label: "Resultados", icon: Timer },
   { href: "/checkin", label: "Check-in de kits", icon: PackageCheck },
   { href: "/admin/utilizadores", label: "Utilizadores", icon: Users },
@@ -48,10 +50,10 @@ const NAV = [
 /** Áreas só para o admin; o organizador não as vê (e o servidor também as bloqueia). */
 const ADMIN_ONLY = new Set(["/admin/utilizadores", "/admin/banners", "/admin/patrocinadores", "/admin/categorias", "/admin/definicoes"]);
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children, initialData }: { children: React.ReactNode; initialData: AdminData }) {
   // O acesso já foi verificado no servidor (src/app/admin/layout.tsx).
   return (
-    <AdminStoreProvider>
+    <AdminStoreProvider initial={initialData}>
       <Frame>{children}</Frame>
     </AdminStoreProvider>
   );
@@ -138,9 +140,6 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold hover:bg-white/5 hover:text-white">
           <ExternalLink className="size-4" /> Ver site
         </Link>
-        <button onClick={() => setConfirm(true)} className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold hover:bg-white/5 hover:text-white">
-          <RotateCcw className="size-4" /> Repor dados de demonstração
-        </button>
       </div>
       <ConfirmModal
         open={confirm}

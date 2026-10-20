@@ -255,11 +255,11 @@ export function RegistrationWizard({ event, today }: { event: SportsEvent; today
             <div className="rounded-2xl bg-ink-900 p-4 text-white"><p className="text-sm text-ink-300">O seu dorsal</p><p className="font-display text-2xl leading-tight font-extrabold">Após confirmar o pagamento</p></div>
           </div>
 
-          <PaymentInstructions className="mt-4" method={done.method} amount={done.amount} code={done.code} accounts={done.accounts} expiresAt={done.expiresAt} />
+          <PaymentInstructions className="mt-4" method={done.method} amount={done.amount} code={done.code} accounts={done.accounts} expiresAt={done.expiresAt} eventTitle={event.title} />
 
           <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left text-[15px] text-sky-900">
             <Upload className="mt-0.5 size-5 shrink-0" />
-            <p><strong>Depois de pagar:</strong> envie a foto ou o PDF do comprovativo em <em>As minhas inscrições</em>, ou pelo WhatsApp com o código {done.code}.</p>
+            <p><strong>Depois de pagar:</strong> envie a foto do comprovativo pelo WhatsApp da organização, com o código {done.code}. Pode voltar a ver estes dados em <em>As minhas inscrições</em>.</p>
           </div>
 
           <div className="mt-4 rounded-2xl border border-ink-200 p-4 text-left text-[15px]">
@@ -478,7 +478,7 @@ export function RegistrationWizard({ event, today }: { event: SportsEvent; today
                 })}
               </div>
               <p className="rounded-xl bg-ink-50 p-4 text-[15px] text-ink-700">
-                Ao confirmar, a sua vaga fica <strong>reservada</strong> e mostramos para onde pagar. Depois de pagar, envie o <strong>comprovativo</strong>: a organização confirma e recebe o dorsal.
+                Ao confirmar, a sua vaga fica <strong>reservada</strong> e mostramos para onde pagar. Depois de pagar, envie o <strong>comprovativo pelo WhatsApp</strong> da organização: quando confirmarem, recebe o dorsal.
               </p>
               <p className="flex items-center gap-2 text-sm text-ink-500"><Lock className="size-4 text-emerald-600" /> Os seus dados estão protegidos (Lei n.º 22/11 de Protecção de Dados Pessoais).</p>
             </div>

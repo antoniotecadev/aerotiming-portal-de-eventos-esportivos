@@ -65,14 +65,14 @@ export async function assignBib(tx: Tx, registrationId: string) {
 }
 
 /**
- * Expira as inscrições sem comprovativo depois do prazo (tarefa 7.7): pagamento `pendente`
+ * Expira as inscrições não pagas depois do prazo (tarefa 7.7): pagamento `pendente` ou `rejeitado`
  * com `expires_at` no passado → pagamento `expirado`, inscrição `expirada`, vaga devolvida.
- * Nunca toca em pagamentos `em_analise` (aguardam o admin/organizador).
+ * Nunca toca em pagamentos `em_analise` (o organizador já recebeu o comprovativo pelo WhatsApp).
  */
 export async function expireStaleRegistrations(filter: { distanceId?: string } = {}) {
   const stale = await prisma.payment.findMany({
     where: {
-      status: "pendente",
+      status: { in: ["pendente", "rejeitado"] },
       expiresAt: { lt: new Date() },
       registration: { status: "pagamento_pendente", ...(filter.distanceId ? { distanceId: filter.distanceId } : {}) },
     },

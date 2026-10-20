@@ -1,7 +1,7 @@
-import type { Gender, Participant, PaymentStatus, RaceResult, Registration, User } from "../types";
+import type { Gender, Participant, PaymentStatus, RaceResult, Registration, User } from "../../src/lib/types";
 import { EVENTS } from "./events";
 import { PROVINCES } from "./catalog";
-import { seeded } from "./helpers";
+import { seeded } from "../../src/lib/route-helpers";
 
 const MALE = ["António", "Manuel", "João", "Domingos", "Paulo", "Adilson", "Edson", "Hélder", "Mário", "Nelson", "Osvaldo", "Valdemar", "Kiluanje", "Ngola", "Zola", "Feliciano", "Agostinho", "Bento", "Celestino", "Délcio", "Evaristo", "Gelson", "Ivandro", "Jacinto", "Lukeny", "Mateus", "Nzinga", "Pedro", "Simão", "Teodoro"];
 const FEMALE = ["Ana", "Maria", "Esperança", "Joana", "Luzia", "Neide", "Rosa", "Teresa", "Yola", "Ngueza", "Kiesse", "Wizi", "Djamila", "Elsa", "Fátima", "Graça", "Helena", "Isabel", "Josefa", "Kátia", "Leopoldina", "Madalena", "Nádia", "Odete", "Palmira", "Rebeca", "Sónia", "Tânia", "Vanda", "Zenaide"];

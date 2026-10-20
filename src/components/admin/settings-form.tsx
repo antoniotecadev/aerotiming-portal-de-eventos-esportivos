@@ -75,21 +75,11 @@ export function SettingsForm() {
             {f("tiktok", "TikTok", { type: "url", placeholder: "https://tiktok.com/@…" })}
           </div>
         </FormSection>
-        <FormSection title="Dados de pagamento" description="Mostrados aos atletas para pagamento por referência ou transferência.">
-          <div className="grid gap-5 sm:grid-cols-2">
-            {f("multicaixaEntity", "Entidade Multicaixa", { placeholder: "11223", hint: "Para pagamentos por referência." })}
-            {f("bankName", "Banco")}
-            {f("iban", "IBAN", { placeholder: "AO06 0000 0000 0000 0000 0000 0", className: "sm:col-span-2" })}
-            {f("accountHolder", "Titular da conta")}
-          </div>
-        </FormSection>
-        <FormSection title="Dados de demonstração" description="O painel guarda as alterações neste navegador.">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-ink-600">Repor elimina todas as alterações e volta aos dados originais de demonstração.</p>
-            <Button variant="outline" onClick={() => setConfirmReset(true)}>
-              <RotateCcw /> Repor dados de demonstração
-            </Button>
-          </div>
+        <FormSection title="Pagamentos" description="Contas de recebimento e WhatsApp para comprovativos.">
+          <p className="text-[15px] text-ink-600">
+            As contas (IBAN, Multicaixa Express, KWiK) e o WhatsApp para comprovativos são definidos em{" "}
+            <a href="/admin/pagamentos/contas" className="font-semibold text-brand-700 hover:underline">Pagamentos → Contas e WhatsApp</a>.
+          </p>
         </FormSection>
       </div>
 

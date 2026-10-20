@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, ImagePlus, Search, TriangleAlert, Upload, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImagePlus, Loader2, Search, TriangleAlert, Upload, X } from "lucide-react";
+import { useToast } from "@/components/ui/toast";
+import { uploadFile } from "@/server/actions/uploads";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { cn } from "@/lib/utils";
@@ -159,7 +161,16 @@ export function ConfirmModal({
   );
 }
 
-/** Upload simulado de imagem: pré-visualização local via URL.createObjectURL. */
+/** Envia o ficheiro para o Supabase Storage (bucket "media") e devolve o URL público. */
+async function sendFile(file: File, kind: "image" | "document", folder: string) {
+  const fd = new FormData();
+  fd.set("file", file);
+  fd.set("kind", kind);
+  fd.set("folder", folder);
+  return uploadFile(fd);
+}
+
+/** Upload de imagem para o Supabase Storage. */
 export function ImageUpload({
   value,
   onChange,
@@ -167,6 +178,7 @@ export function ImageUpload({
   aspect = "aspect-video",
   className,
   fit = "cover",
+  folder = "imagens",
 }: {
   value: string;
   onChange: (url: string) => void;
@@ -174,8 +186,11 @@ export function ImageUpload({
   aspect?: string;
   className?: string;
   fit?: "cover" | "contain";
+  folder?: string;
 }) {
   const id = useId();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
   return (
     <div className={cn("space-y-2", className)}>
       <label
@@ -185,7 +200,9 @@ export function ImageUpload({
           aspect,
         )}
       >
-        {value ? (
+        {busy ? (
+          <span className="flex items-center gap-2 text-sm font-semibold text-ink-600"><Loader2 className="size-5 animate-spin" /> A carregar…</span>
+        ) : value ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={value} alt="" className={cn("absolute inset-0 size-full", fit === "cover" ? "object-cover" : "object-contain p-4")} />
@@ -206,10 +223,15 @@ export function ImageUpload({
         type="file"
         accept="image/*"
         className="sr-only"
-        onChange={(e) => {
+        onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange(URL.createObjectURL(f));
           e.target.value = "";
+          if (!f) return;
+          setBusy(true);
+          const res = await sendFile(f, "image", folder);
+          setBusy(false);
+          if (!res.ok) return toast({ title: "Não foi possível carregar", description: res.error, tone: "error" });
+          onChange(res.url);
         }}
       />
       {value && (
@@ -221,7 +243,7 @@ export function ImageUpload({
   );
 }
 
-/** Upload simulado de ficheiro genérico (PDF, GPX…). Devolve nome + URL local. */
+/** Upload de ficheiro (PDF, GPX…) para o Supabase Storage. Devolve nome + URL público. */
 export function FileUpload({
   accept,
   value,
@@ -234,10 +256,12 @@ export function FileUpload({
   label: string;
 }) {
   const ref = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-ink-300 bg-ink-50 p-3">
-      <Button variant="outline" size="sm" onClick={() => ref.current?.click()}>
-        <Upload /> {label}
+      <Button variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={busy}>
+        {busy ? <Loader2 className="animate-spin" /> : <Upload />} {busy ? "A carregar…" : label}
       </Button>
       {value ? (
         <span className="flex min-w-0 items-center gap-2 text-sm text-ink-700">
@@ -254,10 +278,15 @@ export function FileUpload({
         type="file"
         accept={accept}
         className="sr-only"
-        onChange={(e) => {
+        onChange={async (e) => {
           const f = e.target.files?.[0];
-          if (f) onChange({ name: f.name, url: URL.createObjectURL(f) });
           e.target.value = "";
+          if (!f) return;
+          setBusy(true);
+          const res = await sendFile(f, "document", "documentos");
+          setBusy(false);
+          if (!res.ok) return toast({ title: "Não foi possível carregar", description: res.error, tone: "error" });
+          onChange({ name: res.name, url: res.url });
         }}
       />
     </div>

@@ -11,7 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
-import { PROVINCES } from "@/lib/data";
+import { PROVINCES } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import type { Gender, TShirtSize, User, UserRole } from "@/lib/types";
 import { normalize, uid, useAdmin } from "./admin-store";

@@ -3,6 +3,7 @@ import { ShieldAlert } from "lucide-react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { getCurrentUser, hasRole } from "@/server/auth";
+import { getAdminData } from "@/server/queries/admin";
 
 export const metadata: Metadata = {
   title: { default: "Gestão", template: "%s · Gestão AeroTiming" },
@@ -35,5 +36,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
     );
   }
-  return <AdminShell>{children}</AdminShell>;
+  return <AdminShell initialData={await getAdminData(user!)}>{children}</AdminShell>;
 }

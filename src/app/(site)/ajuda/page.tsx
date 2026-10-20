@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 const GUIDE = [
   { Icon: MousePointerClick, title: "Escolha a prova", text: "Abra «Eventos» e toque na prova que quer fazer." },
   { Icon: Route, title: "Escolha a distância", text: "Toque em «Inscrever-me» e escolha, por exemplo, 5 km ou 10 km." },
-  { Icon: CreditCard, title: "Pague", text: "Com Multicaixa Express, referência no ATM ou transferência." },
+  { Icon: CreditCard, title: "Pague", text: "Multicaixa Express, transferência, depósito ou KWiK — e envie o comprovativo pelo WhatsApp." },
   { Icon: Ticket, title: "Receba o bilhete", text: "Chega por SMS e fica na sua conta. Mostre-o no levantamento do kit." },
 ];
 

@@ -1,15 +1,15 @@
-// ⚠️ DADOS MOCK — só usados pelo seed (prisma/seed.ts) e pelas áreas que ainda não foram
+// DADOS DE DEMONSTRAÇÃO — usados só pelo seed (prisma/seed.ts).
 // migradas para a BD (perfil/auth → Fase 6, admin → Fase 9). As páginas públicas usam
 // src/server/queries. Ver GUIA_MIGRACAO.md (tarefa 5.12).
-import type { CategorySlug, EventDistance, SportsEvent } from "../types";
-import * as utils from "../event-utils";
+import type { CategorySlug, EventDistance, SportsEvent } from "../../src/lib/types";
+import * as utils from "../../src/lib/event-utils";
 import { EVENTS } from "./events";
 import { BANNERS, CATEGORIES, SPONSORS } from "./catalog";
-import { PROVINCES } from "../constants";
+import { PROVINCES } from "../../src/lib/constants";
 import { PARTICIPANTS, REGISTRATIONS, RESULTS, USERS } from "./people";
 
 export { EVENTS, BANNERS, CATEGORIES, PROVINCES, SPONSORS, PARTICIPANTS, REGISTRATIONS, RESULTS, USERS };
-export { OPEN_STATUSES, isOpen, slotsLeft, filterEvents, type EventFilters } from "../event-utils";
+export { OPEN_STATUSES, isOpen, slotsLeft, filterEvents, type EventFilters } from "../../src/lib/event-utils";
 
 /** "Hoje" fixo para os dados mock fazerem sentido. */
 export const TODAY = "2026-10-14";

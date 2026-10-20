@@ -1,105 +1,23 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import type { Banner, Category, Participant, RaceResult, Registration, SportsEvent, Sponsor, User } from "@/lib/types";
-import { BANNERS, CATEGORIES, EVENTS, PARTICIPANTS, REGISTRATIONS, RESULTS, SPONSORS, USERS } from "@/lib/data";
+import { useRouter } from "next/navigation";
+import type { Banner, Category, Participant, RaceResult, SportsEvent, Sponsor, User } from "@/lib/types";
+import { useToast } from "@/components/ui/toast";
+import { adminMutate, type AdminOp } from "@/server/actions/admin";
+import type { AdminData, AdminEvent, AdminParticipant, CollectionName, Collections, SiteSettings } from "./admin-types";
+
+export type { AdminData, AdminEvent, AdminParticipant, CollectionName, SiteSettings } from "./admin-types";
+export { DEFAULT_SETTINGS } from "./admin-types";
 
 /**
- * Loja de dados do painel de gestão (mock). Parte dos dados de demonstração,
- * aplica as alterações em memória e guarda-as no localStorage.
- * Quando houver backend, cada acção passa a chamar a API correspondente.
+ * Loja de dados do painel — DADOS REAIS (Fase 9). Os dados chegam do servidor (src/server/queries/admin.ts,
+ * já filtrados por permissão). Cada acção actualiza o ecrã de imediato e grava no servidor
+ * (src/server/actions/admin.ts); a seguir os dados são relidos. Se o servidor recusar, mostra o erro e repõe.
  */
 
-const STORAGE_KEY = "aerotiming:admin";
-const VERSION = 1;
-
-/** Evento com campos extra que só existem no painel (rascunho, ficheiros simulados). */
-export type AdminEvent = SportsEvent & {
-  draft?: boolean;
-  regulationPdf?: { name: string; url: string } | null;
-  routeFiles?: Record<string, { gpx?: string; image?: string }>;
-};
-
-export type AdminParticipant = Participant & { kitPickedUp?: boolean };
-
-export interface SiteSettings {
-  siteName: string;
-  tagline: string;
-  email: string;
-  phone: string;
-  whatsapp: string;
-  address: string;
-  facebook: string;
-  instagram: string;
-  youtube: string;
-  tiktok: string;
-  multicaixaEntity: string;
-  bankName: string;
-  iban: string;
-  accountHolder: string;
-}
-
-export const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: "AeroTiming",
-  tagline: "Eventos desportivos em Angola",
-  email: "geral@aerotiming.ao",
-  phone: "+244 923 000 000",
-  whatsapp: "+244 923 000 000",
-  address: "Talatona, Luanda",
-  facebook: "https://facebook.com/aerotiming",
-  instagram: "https://instagram.com/aerotiming",
-  youtube: "",
-  tiktok: "",
-  multicaixaEntity: "11223",
-  bankName: "Banco Palanca",
-  iban: "AO06 0040 0000 1234 5678 1019 1",
-  accountHolder: "AeroTiming, Lda.",
-};
-
-export interface AdminData {
-  events: AdminEvent[];
-  participants: AdminParticipant[];
-  results: RaceResult[];
-  users: User[];
-  registrations: Registration[];
-  banners: Banner[];
-  sponsors: Sponsor[];
-  categories: Category[];
-  settings: SiteSettings;
-  /** Slugs de eventos com resultados publicados no site. */
-  publishedResults: string[];
-}
-
-type Collections = {
-  events: AdminEvent;
-  participants: AdminParticipant;
-  results: RaceResult;
-  users: User;
-  registrations: Registration;
-  banners: Banner;
-  sponsors: Sponsor;
-  categories: Category;
-};
-export type CollectionName = keyof Collections;
-
-function seed(): AdminData {
-  const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
-  return {
-    events: clone(EVENTS),
-    participants: clone(PARTICIPANTS),
-    results: clone(RESULTS),
-    users: clone(USERS),
-    registrations: clone(REGISTRATIONS),
-    banners: clone(BANNERS),
-    sponsors: clone(SPONSORS),
-    categories: clone(CATEGORIES),
-    settings: { ...DEFAULT_SETTINGS },
-    publishedResults: Array.from(new Set(RESULTS.map((r) => r.eventSlug))),
-  };
-}
-
 const keyOf = (name: CollectionName, item: object) =>
-  name === "categories" ? (item as Category).slug : (item as { id: string }).id;
+  name === "categories" ? (item as { slug: string }).slug : (item as { id: string }).id;
 
 interface AdminStore {
   data: AdminData;
@@ -125,92 +43,153 @@ export function useAdmin() {
   return ctx;
 }
 
-export function AdminStoreProvider({ children }: { children: React.ReactNode }) {
-  const [data, setData] = useState<AdminData>(seed);
-  const [hydrated, setHydrated] = useState(false);
-  const skipSave = useRef(true);
+/** Converte uma alteração do ecrã na operação do servidor. */
+function opFor<K extends CollectionName>(name: K, item: Collections[K], isNew: boolean): AdminOp | null {
+  switch (name) {
+    case "events":
+      return { type: "event.save", event: item as AdminEvent, isNew };
+    case "results":
+      return { type: "results.sync", upsert: [item as RaceResult], removeIds: [] };
+    case "users":
+      return { type: "user.save", user: item as User, isNew };
+    case "banners":
+      return { type: "banner.save", banner: item as Banner };
+    case "sponsors":
+      return { type: "sponsor.save", sponsor: item as Sponsor };
+    default:
+      return null;
+  }
+}
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as { v: number; data: AdminData };
-        if (parsed.v === VERSION && parsed.data?.events) setData({ ...seed(), ...parsed.data });
-      }
-    } catch {}
-    setHydrated(true);
-  }, []);
+export function AdminStoreProvider({ initial, children }: { initial: AdminData; children: React.ReactNode }) {
+  const router = useRouter();
+  const toast = useToast();
+  const [data, setData] = useState<AdminData>(initial);
+  const latest = useRef(data);
+  latest.current = data;
 
-  useEffect(() => {
-    if (!hydrated) return;
-    if (skipSave.current) {
-      skipSave.current = false;
-      return;
-    }
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ v: VERSION, data }));
-    } catch {}
-  }, [data, hydrated]);
+  // Quando o servidor devolve dados novos (router.refresh), sincroniza
+  useEffect(() => setData(initial), [initial]);
 
-  const create = useCallback<AdminStore["create"]>((name, item) => {
-    setData((d) => ({ ...d, [name]: [item, ...(d[name] as object[])] }));
-  }, []);
+  const send = useCallback(
+    async (op: AdminOp | null) => {
+      if (!op) return;
+      const res = await adminMutate(op);
+      if (!res.ok) toast({ title: "Não foi guardado", description: res.error, tone: "error" });
+      else if (res.message) toast({ title: "Atenção", description: res.message, tone: "info" });
+      router.refresh();
+    },
+    [router, toast],
+  );
 
-  const update = useCallback<AdminStore["update"]>((name, id, patch) => {
-    setData((d) => ({ ...d, [name]: (d[name] as object[]).map((x) => (keyOf(name, x) === id ? { ...x, ...patch } : x)) }));
-  }, []);
+  const find = <K extends CollectionName>(name: K, id: string) =>
+    (latest.current[name] as unknown as Collections[K][]).find((x) => keyOf(name, x as object) === id);
 
-  const remove = useCallback<AdminStore["remove"]>((name, id) => {
-    setData((d) => ({ ...d, [name]: (d[name] as object[]).filter((x) => keyOf(name, x) !== id) }));
-  }, []);
+  const create = useCallback<AdminStore["create"]>(
+    (name, item) => {
+      setData((d) => ({ ...d, [name]: [item, ...(d[name] as object[])] }));
+      void send(opFor(name, item, true));
+    },
+    [send],
+  );
 
-  const replaceWhere = useCallback<AdminStore["replaceWhere"]>((name, match, items) => {
-    setData((d) => {
-      const list = d[name] as unknown as Collections[typeof name][];
-      return { ...d, [name]: [...list.filter((x) => !match(x)), ...items] };
-    });
-  }, []);
+  const update = useCallback<AdminStore["update"]>(
+    (name, id, patch) => {
+      const current = find(name, id);
+      setData((d) => ({ ...d, [name]: (d[name] as object[]).map((x) => (keyOf(name, x) === id ? { ...x, ...patch } : x)) }));
+      if (!current) return;
+      if (name === "participants") return void send({ type: "participant.update", id, patch: patch as Partial<AdminParticipant> });
+      if (name === "categories") return void send({ type: "category.update", slug: id, patch: patch as Partial<Category> });
+      void send(opFor(name, { ...current, ...patch } as Collections[typeof name], false));
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [send],
+  );
 
-  const confirmPayment = useCallback<AdminStore["confirmPayment"]>((ids) => {
-    const set = new Set(Array.isArray(ids) ? ids : [ids]);
-    setData((d) => ({ ...d, participants: d.participants.map((p) => (set.has(p.id) ? { ...p, paymentStatus: "confirmado" } : p)) }));
-  }, []);
+  const remove = useCallback<AdminStore["remove"]>(
+    (name, id) => {
+      setData((d) => ({ ...d, [name]: (d[name] as object[]).filter((x) => keyOf(name, x) !== id) }));
+      const op: AdminOp | null =
+        name === "events" ? { type: "event.remove", id }
+        : name === "results" ? { type: "results.sync", upsert: [], removeIds: [id] }
+        : name === "users" ? { type: "user.remove", id }
+        : name === "banners" ? { type: "banner.remove", id }
+        : name === "sponsors" ? { type: "sponsor.remove", id }
+        : null;
+      void send(op);
+    },
+    [send],
+  );
 
-  const toggleActive = useCallback<AdminStore["toggleActive"]>((name, id) => {
-    setData((d) => ({ ...d, [name]: (d[name] as { id: string; active: boolean }[]).map((x) => (x.id === id ? { ...x, active: !x.active } : x)) }));
-  }, []);
+  const replaceWhere = useCallback<AdminStore["replaceWhere"]>(
+    (name, match, items) => {
+      const list = latest.current[name] as unknown as Collections[typeof name][];
+      const keep = new Set(items.map((x) => keyOf(name, x as object)));
+      const removeIds = list.filter(match).map((x) => keyOf(name, x as object)).filter((id) => !keep.has(id));
+      setData((d) => ({ ...d, [name]: [...(d[name] as unknown as Collections[typeof name][]).filter((x) => !match(x)), ...items] }));
+      if (name === "results") void send({ type: "results.sync", upsert: items as RaceResult[], removeIds });
+    },
+    [send],
+  );
 
-  const moveBanner = useCallback((id: string, dir: -1 | 1) => {
-    setData((d) => {
-      const sorted = [...d.banners].sort((a, b) => a.order - b.order);
+  const confirmPayment = useCallback<AdminStore["confirmPayment"]>(
+    (ids) => {
+      const list = Array.isArray(ids) ? ids : [ids];
+      const set = new Set(list);
+      setData((d) => ({ ...d, participants: d.participants.map((p) => (set.has(p.id) ? { ...p, paymentStatus: "confirmado" } : p)) }));
+      void send({ type: "payment.confirm", participantIds: list });
+    },
+    [send],
+  );
+
+  const toggleActive = useCallback<AdminStore["toggleActive"]>(
+    (name, id) => {
+      const current = find(name, id) as { active: boolean } | undefined;
+      if (current) update(name, id, { active: !current.active } as never);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [update],
+  );
+
+  const moveBanner = useCallback(
+    (id: string, dir: -1 | 1) => {
+      const sorted = [...latest.current.banners].sort((a, b) => a.order - b.order);
       const i = sorted.findIndex((b) => b.id === id);
       const j = i + dir;
-      if (i < 0 || j < 0 || j >= sorted.length) return d;
+      if (i < 0 || j < 0 || j >= sorted.length) return;
       [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
-      return { ...d, banners: sorted.map((b, k) => ({ ...b, order: k + 1 })) };
-    });
-  }, []);
+      setData((d) => ({ ...d, banners: sorted.map((b, k) => ({ ...b, order: k + 1 })) }));
+      void send({ type: "banner.order", ids: sorted.map((b) => b.id) });
+    },
+    [send],
+  );
 
-  const setResultsPublished = useCallback((slug: string, published: boolean) => {
-    setData((d) => ({
-      ...d,
-      publishedResults: published ? Array.from(new Set([...d.publishedResults, slug])) : d.publishedResults.filter((s) => s !== slug),
-    }));
-  }, []);
+  const setResultsPublished = useCallback(
+    (slug: string, published: boolean) => {
+      setData((d) => ({
+        ...d,
+        publishedResults: published ? Array.from(new Set([...d.publishedResults, slug])) : d.publishedResults.filter((x) => x !== slug),
+      }));
+      void send({ type: "results.publish", eventSlug: slug, published });
+    },
+    [send],
+  );
 
-  const saveSettings = useCallback((settings: SiteSettings) => setData((d) => ({ ...d, settings })), []);
+  const saveSettings = useCallback(
+    (settings: SiteSettings) => {
+      setData((d) => ({ ...d, settings }));
+      void send({ type: "settings.save", settings });
+    },
+    [send],
+  );
 
   const reset = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {}
-    skipSave.current = true;
-    setData(seed());
-  }, []);
+    toast({ title: "Indisponível", description: "O painel usa dados reais. Para repor os dados de demonstração use \"npm run db:seed\" numa base de dados de desenvolvimento.", tone: "info" });
+  }, [toast]);
 
   const value = useMemo<AdminStore>(
-    () => ({ data, hydrated, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset }),
-    [data, hydrated, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset],
+    () => ({ data, hydrated: true, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset }),
+    [data, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

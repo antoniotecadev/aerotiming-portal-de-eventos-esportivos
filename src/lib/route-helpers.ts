@@ -1,4 +1,4 @@
-import type { EventRoute, RegulationSection, RoutePoint } from "../types";
+import type { EventRoute, RegulationSection, RoutePoint } from "./types";
 
 /** Gerador pseudo-aleatório determinístico (mesmo resultado no servidor e no cliente). */
 export function seeded(seed: number) {
@@ -93,8 +93,8 @@ export function regulation(opts: {
     {
       title: "3. Inscrições e pagamento",
       items: [
-        "A inscrição só fica confirmada após o pagamento (Multicaixa Express, referência Multicaixa ou transferência bancária).",
-        "A referência de pagamento é válida por 48 horas. Depois desse prazo a vaga é libertada.",
+        "A inscrição só fica confirmada depois de a organização confirmar o pagamento (Multicaixa Express, transferência, depósito ou KWiK), a partir do comprovativo enviado pelo WhatsApp.",
+        "O pagamento deve ser feito dentro do prazo indicado na inscrição (normalmente 72 horas). Depois desse prazo a vaga é libertada.",
         "Não há devolução do valor pago, excepto em caso de cancelamento da prova pela organização.",
       ],
     },

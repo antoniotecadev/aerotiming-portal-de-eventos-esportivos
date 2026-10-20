@@ -41,7 +41,7 @@ export default function TermosPage() {
           title: "Inscrições e pagamentos",
           body: [
             "A inscrição só fica confirmada depois de recebermos o pagamento. Os preços são apresentados em Kwanzas (Kz) e incluem os impostos aplicáveis.",
-            "As referências Multicaixa são válidas por 48 horas. Depois desse prazo, a inscrição é cancelada automaticamente e a vaga fica livre.",
+            "O pagamento é feito fora do site (Multicaixa Express, transferência, depósito ou KWiK) e confirmado manualmente pela organização, a partir do comprovativo enviado pelo WhatsApp. Se o pagamento não for feito dentro do prazo indicado, a inscrição expira automaticamente e a vaga fica livre.",
             "A inscrição é pessoal e intransmissível. Mudanças de distância ou de titular dependem das regras de cada evento.",
           ],
         },

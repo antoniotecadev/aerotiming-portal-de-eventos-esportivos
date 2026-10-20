@@ -1,13 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function LogoMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" className={cn("size-9", className)} aria-hidden>
-      <rect width="40" height="40" rx="11" className="fill-brand-600" />
-      <path d="M11 29 L20 10 L29 29" fill="none" stroke="white" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M14.5 22 H25.5" stroke="#ffc21a" strokeWidth="4" strokeLinecap="round" />
-    </svg>
+    <div className={cn("relative size-9", className)}>
+      <Image
+        src="/logotipo-conexaosport.png"
+        alt="Logotipo Conexão Sport"
+        fill
+        sizes="(max-width: 768px) 36px, 36px"
+        priority
+        className="object-contain"
+      />
+    </div>
   );
 }
 

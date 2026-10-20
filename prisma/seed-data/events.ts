@@ -1,5 +1,5 @@
-import type { SportsEvent } from "../types";
-import { CREATED, regulation, route } from "./helpers";
+import type { SportsEvent } from "../../src/lib/types";
+import { CREATED, regulation, route } from "../../src/lib/route-helpers";
 
 const IMG = {
   maratona: "/images/eventos/maratona.jpg",

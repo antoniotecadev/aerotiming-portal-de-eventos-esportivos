@@ -48,42 +48,33 @@ export const FAQ: FaqGroup[] = [
     items: [
       {
         q: "Que formas de pagamento existem?",
-        a: ["Pode pagar com Multicaixa Express, com Referência Multicaixa (no ATM ou no Internet banking) ou por transferência bancária. Todos os valores são em Kwanzas (Kz)."],
+        a: ["Pode pagar por Multicaixa Express, transferência bancária (IBAN), depósito ao balcão do banco ou KWiK. Todos os valores são em Kwanzas (Kz)."],
       },
       {
-        q: "Como pago com Multicaixa Express?",
-        a: ["É a forma mais rápida: a inscrição fica confirmada no momento."],
+        q: "Como funciona o pagamento?",
+        a: ["O pagamento é feito fora do site e confirmado pela organização do evento. A sua vaga fica reservada enquanto paga."],
         steps: [
-          "No fim da inscrição escolha «Multicaixa Express».",
-          "Escreva o número de telemóvel associado à app Multicaixa Express.",
-          "Abra a app no telemóvel e aceite o pagamento (tem 5 minutos).",
-          "Pronto! Recebe logo o SMS de confirmação.",
+          "No fim da inscrição escolha como quer pagar.",
+          "Pague o valor indicado para o número ou IBAN que aparece no ecrã, escrevendo o código da inscrição (ex.: AT-2026-01234) no descritivo.",
+          "Toque em «Enviar comprovativo pelo WhatsApp» e envie a foto do comprovativo à organização.",
+          "Quando a organização confirmar, a inscrição fica «Confirmada» e recebe o seu dorsal em «As minhas inscrições».",
         ],
       },
       {
-        q: "Como pago com Referência Multicaixa (ATM ou Internet banking)?",
-        a: ["Depois da inscrição mostramos uma Entidade, uma Referência e o Montante. Também os enviamos por SMS e ficam guardados em «As minhas inscrições»."],
-        steps: [
-          "No ATM (ou no Internet banking do seu banco) escolha «Pagamentos» e depois «Pagamento por referência».",
-          "Escreva a Entidade (5 números), a Referência (9 números) e o Montante exacto.",
-          "Confirme e guarde o talão.",
-          "A inscrição fica confirmada em poucos minutos e recebe um SMS.",
-        ],
-      },
-      {
-        q: "Como pago por transferência bancária?",
-        a: [
-          "Faça a transferência para o IBAN indicado no fim da inscrição, escrevendo o código da inscrição (ex.: AT-2026-01234) no descritivo.",
-          "Depois envie o comprovativo por WhatsApp ou pela sua área pessoal. A confirmação pode demorar até 1 dia útil.",
-        ],
+        q: "Onde vejo outra vez os dados para pagar?",
+        a: ["Em «As minhas inscrições», toque em «Como pagar». Lá está o valor, o código, a conta e o botão do WhatsApp."],
       },
       {
         q: "Quanto tempo tenho para pagar?",
-        a: ["A referência é válida por 48 horas. Se não pagar dentro desse prazo, a inscrição é cancelada e a vaga fica livre para outra pessoa. Pode inscrever-se de novo se ainda houver vagas."],
+        a: ["Normalmente 72 horas (cada evento pode definir outro prazo, que aparece no ecrã). Se não pagar e enviar o comprovativo dentro do prazo, a inscrição expira e a vaga fica livre para outra pessoa. Pode inscrever-se de novo se ainda houver vagas."],
       },
       {
-        q: "Paguei mas a inscrição ainda diz «Aguarda pagamento». E agora?",
-        a: ["Os pagamentos por referência demoram normalmente até 15 minutos. Se passar mais de 2 horas, envie-nos o talão por WhatsApp e resolvemos rapidamente."],
+        q: "Já paguei e enviei o comprovativo, mas ainda diz «Aguarda pagamento». E agora?",
+        a: ["A organização confirma os pagamentos manualmente, por isso pode demorar algumas horas. Quando receberem o comprovativo, a inscrição passa a «Comprovativo recebido» e deixa de expirar. Se demorar mais de 1 dia útil, fale com a organização pelo mesmo WhatsApp."],
+      },
+      {
+        q: "O meu pagamento foi rejeitado. O que faço?",
+        a: ["Em «As minhas inscrições» aparece o motivo (por exemplo, valor errado). Corrija, pague a diferença ou volte a pagar e envie o novo comprovativo pelo WhatsApp dentro do novo prazo."],
       },
     ],
   },

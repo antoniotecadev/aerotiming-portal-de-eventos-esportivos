@@ -1,4 +1,4 @@
-import type { Banner, Category, Sponsor } from "../types";
+import type { Banner, Category, Sponsor } from "../../src/lib/types";
 
 export const CATEGORIES: Category[] = [
   { slug: "corrida", name: "Corrida", description: "Corridas de rua: 5 km, 10 km, meia maratona e maratona." },
@@ -9,7 +9,7 @@ export const CATEGORIES: Category[] = [
   { slug: "triatlo", name: "Triatlo", description: "Natação, ciclismo e corrida numa só prova." },
 ];
 
-export { PROVINCES } from "../constants";
+export { PROVINCES } from "../../src/lib/constants";
 
 export const SPONSORS: Sponsor[] = [
   { id: "sp-1", name: "Banco Palanca", logo: "/images/patrocinadores/banco-palanca.svg", url: "#", tier: "principal", active: true },

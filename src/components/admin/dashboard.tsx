@@ -7,7 +7,7 @@ import { Badge, StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PAYMENT_STATUS, formatDate, formatDateTime, formatKz, monthShort } from "@/lib/format";
-import { TODAY } from "@/lib/data";
+import { today } from "@/lib/today";
 import { participantPrice, useAdmin } from "./admin-store";
 import { PageTitle, ProgressBar, StatCard, TableWrap, td, th } from "./admin-ui";
 
@@ -21,7 +21,7 @@ export function Dashboard() {
     const pending = participants.filter((p) => p.paymentStatus === "pendente");
     const revenue = confirmed.reduce((acc, p) => acc + participantPrice(events, p), 0);
     const pendingValue = pending.reduce((acc, p) => acc + participantPrice(events, p), 0);
-    const upcoming = events.filter((e) => e.date >= TODAY && e.status !== "cancelado" && !e.draft).sort((a, b) => a.date.localeCompare(b.date));
+    const upcoming = events.filter((e) => e.date >= today() && e.status !== "cancelado" && !e.draft).sort((a, b) => a.date.localeCompare(b.date));
 
     const byEvent = events
       .map((e) => ({ id: e.id, label: e.title, value: participants.filter((p) => p.eventSlug === e.slug && p.paymentStatus !== "cancelado").length }))
@@ -30,7 +30,7 @@ export function Dashboard() {
       .slice(0, 8);
 
     // Receita confirmada dos últimos 8 meses (até ao mês actual)
-    const [ty, tm] = TODAY.split("-").map(Number);
+    const [ty, tm] = today().split("-").map(Number);
     const months = Array.from({ length: 8 }, (_, i) => {
       const d = new Date(ty, tm - 1 - (7 - i), 1);
       return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: monthShort(d.getMonth()), year: d.getFullYear(), value: 0 };

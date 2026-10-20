@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Clock, Copy, Info } from "lucide-react";
+import { WhatsAppIcon } from "@/components/layout/social-icons";
 import type { PaymentAccounts, PaymentMethod } from "@/lib/types";
 import { PAYMENT_METHOD, formatDateTime, formatKz } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,26 @@ export function CopyField({ label, value, big }: { label: string; value: string;
   );
 }
 
+/** Link para enviar o comprovativo pelo WhatsApp do organizador (D12 — não há envio pelo site). */
+export function proofWhatsAppLink(whatsapp: string, code: string, eventTitle?: string) {
+  const text = `Olá! Envio o comprovativo de pagamento da inscrição ${code}${eventTitle ? ` (${eventTitle})` : ""}.`;
+  return `https://wa.me/${whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+}
+
+export function ProofWhatsAppButton({ whatsapp, code, eventTitle, className }: { whatsapp?: string; code: string; eventTitle?: string; className?: string }) {
+  if (!whatsapp) return null;
+  return (
+    <a
+      href={proofWhatsAppLink(whatsapp, code, eventTitle)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn("inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 font-bold text-white hover:brightness-95", className)}
+    >
+      <WhatsAppIcon className="size-5" /> Enviar comprovativo pelo WhatsApp
+    </a>
+  );
+}
+
 const STEPS: Record<PaymentMethod, string[]> = {
   "multicaixa-express": ["Abra a app Multicaixa Express.", "Escolha “Transferir” para o número indicado abaixo.", "Escreva o código da inscrição na descrição."],
   transferencia: ["Entre no Internet Banking ou na app do seu banco.", "Faça uma transferência para o IBAN indicado abaixo.", "Escreva o código da inscrição no descritivo."],
@@ -46,6 +67,7 @@ export function PaymentInstructions({
   code,
   accounts,
   expiresAt,
+  eventTitle,
   className,
 }: {
   method: PaymentMethod;
@@ -53,6 +75,7 @@ export function PaymentInstructions({
   code: string;
   accounts: PaymentAccounts;
   expiresAt?: string;
+  eventTitle?: string;
   className?: string;
 }) {
   const iban = accounts.iban[0];
@@ -60,7 +83,7 @@ export function PaymentInstructions({
     <div className={cn("space-y-3 rounded-2xl bg-amber-50 p-4 text-left ring-1 ring-amber-200", className)}>
       <p className="font-bold text-amber-900">Como pagar — {PAYMENT_METHOD[method]}</p>
       <ol className="space-y-1 text-[15px] text-amber-950">
-        {STEPS[method].map((s, i) => (
+        {[...STEPS[method], "Envie a foto do comprovativo pelo WhatsApp da organização (botão abaixo)."].map((s, i) => (
           <li key={s}>
             <strong>{i + 1}.</strong> {s}
           </li>
@@ -79,6 +102,7 @@ export function PaymentInstructions({
           <Info className="mt-0.5 size-4 shrink-0" /> Os dados para este método ainda não foram definidos. Fale connosco pelo WhatsApp para pagar.
         </p>
       )}
+      <ProofWhatsAppButton whatsapp={accounts.whatsapp} code={code} eventTitle={eventTitle} className="w-full" />
       {expiresAt && (
         <p className="flex items-start gap-2 text-sm text-amber-900">
           <Clock className="mt-0.5 size-4 shrink-0" /> Pague e envie o comprovativo até <strong>{formatDateTime(expiresAt)}</strong>. Depois disso a vaga é libertada.

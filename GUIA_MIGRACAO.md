@@ -35,11 +35,11 @@
 | 2 | Instalar e configurar o Prisma | ✅ Concluída |
 | 3 | Modelar a base de dados (schema) | ✅ Concluída |
 | 4 | Migrações, segurança da BD e seed | ✅ Concluída |
-| 5 | Camada de dados: trocar mock por queries reais | ✅ Concluída (5.10 adiada; 5.12 depois das Fases 6 e 9) |
+| 5 | Camada de dados: trocar mock por queries reais | ✅ Concluída (5.10 adiada) |
 | 6 | Autenticação real (Supabase Auth) | ✅ Concluída (6.14 e permissões por evento ficam para a Fase 9) |
 | 7 | Inscrições reais | ✅ Concluída (7.9 adiada — D7) |
-| 8 | Pagamentos com confirmação manual (admin / organizador) | 🟡 Em curso (8.2, 8.3 e parte da 8.9 feitas na Fase 7) |
-| 9 | Admin real + upload de ficheiros | ⬜ Por começar |
+| 8 | Pagamentos com confirmação manual (admin / organizador) | ✅ Concluída (página Inscrições do painel passa para a BD na Fase 9) |
+| 9 | Admin real + upload de ficheiros | 🟡 Quase concluída (faltam 9.8 contacto e 9.9 rodapé; 9.7 adiada) |
 | 10 | Resultados reais | ⬜ Por começar |
 | 11 | Notificações (SMS / e-mail) | ⏸️ Adiada (D3) |
 | 12 | Produção: deploy, segurança e monitorização | ⬜ Por começar |
@@ -345,8 +345,7 @@ Mudanças em relação à primeira proposta, e porquê:
 - [ ] ⏸️ **5.10** Paginação no servidor para inscritos e resultados (hoje vem tudo de uma vez).
   > ⏸️ Adiado: com os volumes actuais (~100 inscritos e ~100 resultados por evento) não é preciso. Fazer antes do primeiro evento grande (milhares de inscritos), incluindo a pesquisa "Procurar o meu resultado" (`listResultIndex` envia hoje todos os resultados para o browser).
 - [x] **5.11** Lista de províncias: manter como constante em código (não muda) — mover para `src/lib/constants.ts`. — ✅ 2026-10-20 (`src/lib/constants.ts`)
-- [ ] **5.12** Quando nenhuma página pública importar `@/lib/data`: mover os mocks para `prisma/seed-data/` (só o seed os usa) e apagar `src/lib/data/`.
-  > 🟡 As páginas públicas já não importam `@/lib/data`. Ainda dependem dos mocks: perfil e login (`components/profile/*`, `components/auth/*` → Fase 6) e admin (`components/admin/*` → Fase 9). Fazer esta tarefa depois dessas fases.
+- [x] **5.12** Quando nenhuma página pública importar `@/lib/data`: mover os mocks para `prisma/seed-data/` (só o seed os usa) e apagar `src/lib/data/`. — ✅ 2026-10-20 (mocks em `prisma/seed-data/`; gerador de percursos em `src/lib/route-helpers.ts`; nenhum ficheiro de `src/` importa dados de demonstração)
 - [x] **5.13** `npm run build` sem erros e testar todas as páginas públicas. — ✅ 2026-10-20 (build OK; testes no browser em produção: inscrição, perfil, admin, calendário, resultados, telemóvel — sem erros na consola)
 
 ---
@@ -398,8 +397,7 @@ Mudanças em relação à primeira proposta, e porquê:
 - [x] **6.9** Proteger as áreas no servidor (ver a secção *Utilizadores, papéis e permissões*): — ✅ 2026-10-20
   - [x] `app/(site)/perfil/layout.tsx` → `requireUser()` (retirar a guarda cliente do `profile-shell.tsx`)
   - [x] `app/admin/layout.tsx` → admin, organizador ou staff; o menu lateral mostra só as áreas do papel — admin e organizador; páginas só de admin (utilizadores, banners, patrocinadores, categorias, definições) redireccionam o organizador. ⚠️ O acesso do **staff** fica para a tarefa 7.6 (check-in); até lá o staff não entra no painel
-  - [ ] `src/server/permissions.ts` → `canManageEvent(user, eventId)` (admin, ou organizador em `event_staff`) e `canCheckIn(user, eventId)` (inclui staff). Todas as queries e actions do painel filtram por isto
-    > ⏸️ Fica para a Fase 9, quando o painel deixar de usar dados mock (hoje o organizador vê os números de demonstração de todos os eventos).
+  - [x] `src/server/permissions.ts` → `canManageEvent(user, eventId)` (admin, ou organizador em `event_staff`) e `canCheckIn(user, eventId)` (inclui staff). Todas as queries e actions do painel filtram por isto — ✅ 2026-10-20 (Fases 7–9)
   - [x] Botão "Painel de gestão" no menu da conta e no Resumo do perfil para organizador, staff e admin
 - [x] **6.10** Confirmar que o admin master (seed, 4.4) entra e vê o painel completo; que o organizador de teste vê só os seus eventos; que o atleta de teste não entra em `/admin`. — ✅ 2026-10-20 (testado no browser: admin vê tudo; organizador sem Utilizadores/Banners/…; atleta recebe "Acesso restrito")
 - [ ] ❌ **6.11** ~~Login / recuperação por SMS (OTP)~~ — descartado: login só por e-mail e palavra-passe (D2).
@@ -434,44 +432,30 @@ Mudanças em relação à primeira proposta, e porquê:
 
 ---
 
-## Fase 8 — Pagamentos com confirmação manual (admin / organizador)
+## Fase 8 — Pagamentos com confirmação manual (admin / organizador) ✅
 
-> **Decisão (D1, 2026-10-20):** por agora **não há pagamento automático**. O atleta paga fora do site e envia o comprovativo; o **admin ou o organizador do evento confirma** que recebeu o dinheiro (D10).
+> **Decisões D1, D10 e D12 (2026-10-20):** não há pagamento automático **nem envio de comprovativo pelo site**. O atleta paga fora do site e **envia a foto do comprovativo pelo WhatsApp do organizador**; o **admin ou o organizador do evento confirma** no painel.
 >
 > **Métodos aceites:** Multicaixa Express · Transferência bancária (IBAN) · Depósito bancário · KWiK
 >
-> **Fluxo:** inscrição → `pendente` → atleta envia o comprovativo → `em_analise` → admin/organizador **confirma** (`confirmado` → inscrição `confirmada` + dorsal) ou **rejeita** (`rejeitado` → o atleta pode reenviar).
+> **Fluxo:** inscrição → `pendente` (vaga reservada, prazo a contar) → atleta paga e envia o comprovativo pelo WhatsApp → organizador marca *"Recebi o comprovativo"* (`em_analise`, o prazo pára) → **Confirmar** (`confirmado` → inscrição `confirmada` + dorsal) ou **Rejeitar** com motivo (`rejeitado`, novo prazo para pagar de novo).
 
-- [ ] **8.1** 🟡 Contas de recebimento (D9): **por evento** em `Event.paymentAccounts` (o organizador define no formulário do evento) e, como alternativa, as da AeroTiming em `SiteSetting` (`payment_accounts`, editáveis em `/admin/definicoes`), usadas quando o evento não tem contas próprias:
-  - IBAN(s): banco, titular, IBAN
-  - Número Multicaixa Express e nome do titular
-  - Número / identificador KWiK
-  - Instruções para depósito ao balcão
-  - Prazo para enviar o comprovativo (horas)
-  > 🟡 Leitura feita (`paymentAccountsFor()`: contas do evento ou da AeroTiming; o seed grava contas **fictícias** da AeroTiming). Falta editá-las no admin (Fase 9: definições e formulário do evento).
-- [x] **8.2** `src/server/payments/manual.ts` → `createManualPayment(registration, method)`: cria o `Payment` `pendente`, com `reference` = código da inscrição e `expiresAt` = agora + prazo (8.1). — ✅ 2026-10-20 (feito dentro de `createRegistration`: pagamento `pendente`, `reference` = código, prazo pelas definições)
-- [x] **8.3** Ecrã **"Como pagar"** (no fim da inscrição e no perfil), com instruções passo a passo para o método escolhido: valor, conta de destino, botões "Copiar" e aviso bem visível *"Escreva o código AT-2026-… no descritivo"*. — ✅ 2026-10-20 (`src/components/payments/payment-instructions.tsx`, no fim da inscrição e no perfil)
-- [ ] **8.4** **Envio do comprovativo** (Server Action):
-  - upload de imagem ou PDF (≤ 5 MB) para o bucket **privado** `comprovativos` (Fase 9.1)
-  - campos opcionais: nome de quem pagou, nº da operação, observação
-  - guardar o `proofHash` (SHA-256) → estado `em_analise`
-  - alternativa para quem tem dificuldades: botão **"Enviar pelo WhatsApp"**, com mensagem pré-preenchida com o código. O admin anexa o comprovativo no painel (8.7).
-- [ ] **8.5** Painel → **Pagamentos por confirmar** (`/admin/pagamentos`): o admin vê todos, o **organizador vê os dos seus eventos** (D10, `canManageEvent`):
-  - lista `em_analise`, dos mais antigos para os mais recentes, com contador no menu lateral
-  - pré-visualização do comprovativo (URL assinado, válido poucos minutos)
-  - mostrar ao lado: valor esperado, código, método, nome do atleta
-  - **Confirmar**, numa transacção com update condicional (`where status = em_analise`, para duas pessoas não confirmarem o mesmo pagamento): `Payment.confirmado` + `confirmedAt` / `confirmedById` → `Registration.confirmada` → atribuir dorsal (7.2) → `AuditLog`
-  - **Rejeitar** com motivo obrigatório (`reviewNote`) → `rejeitado` → o atleta vê o motivo no perfil
-- [ ] **8.6** Detecção de duplicados: avisar quem confirma quando o mesmo `transactionRef` ou `proofHash` já foi usado noutro pagamento.
-- [ ] **8.7** Pagamento registado **pelo admin ou organizador**, para quem enviou o comprovativo por WhatsApp ou pagou presencialmente: o admin anexa o comprovativo e confirma de uma só vez.
-- [ ] **8.8** Relatório por evento: totais por método e por estado, e exportação CSV dos pagamentos confirmados, para conferir com o extracto bancário.
-- [ ] **8.9** Adaptar o frontend (que hoje simula pagamento automático e "Referência Multicaixa"):
-  - [x] `src/lib/types.ts` → `PaymentMethod = "multicaixa-express" | "transferencia" | "deposito" | "kwik"`, e `PAYMENT_METHOD` em `src/lib/format.ts` — ✅ 2026-10-20
-  - [x] `components/events/registration-wizard.tsx` → retirar "Referência Multicaixa" e "Confirmação imediata"; os 4 métodos; o ecrã final diz *"Inscrição registada — aguarda confirmação do pagamento"*, com as instruções e o envio do comprovativo — ✅ 2026-10-20
-  - [x] `components/profile/payment-box.tsx`, `registrations-list.tsx`, `profile-overview.tsx` → trocar entidade/referência por instruções + "Enviar comprovativo" + estado (*Por pagar · Em análise · Confirmado · Rejeitado*) — ✅ 2026-10-20 (o `payment-box.tsx` foi apagado; falta só o envio do comprovativo, 8.4)
-  - [ ] `components/admin/registrations-manager.tsx` e `settings-form.tsx` → estado "Em análise", ver comprovativo, rejeitar com motivo, dados de recebimento
-  - [ ] Textos: FAQ de pagamentos (`components/info/faq-data.ts`), regulamento-base (`src/lib/data/helpers.ts`), passos "Como funciona" na Home, nota de preços em `eventos/[slug]/page.tsx`, inscrição de demonstração `reg-2` em `src/lib/data/people.ts`
-- [ ] **8.10** Testes: cada um dos 4 métodos; rejeição e reenvio; expiração sem comprovativo (7.7); dois admins a confirmar ao mesmo tempo; um atleta a tentar ver o comprovativo de outro (deve falhar).
+- [x] **8.1** Contas de recebimento **por evento** (`Event.paymentAccounts`) com as da AeroTiming como alternativa (`site_settings` → `payment_accounts`): IBAN(s), Multicaixa Express, KWiK, instruções de depósito, **WhatsApp para comprovativos** e prazo em horas. Editáveis em **`/admin/pagamentos/contas`** (admin: contas da AeroTiming e de todos os eventos; organizador: só os seus eventos). — ✅ 2026-10-20 (⚠️ as contas da AeroTiming gravadas pelo seed são **fictícias** — substituir pelas reais)
+- [x] **8.2** Criar o pagamento `pendente` na inscrição, com `reference` = código e prazo das contas do evento. — ✅ 2026-10-20 (dentro de `createRegistration`)
+- [x] **8.3** Ecrã **"Como pagar"** (fim da inscrição e perfil): valor, conta, código para o descritivo, botões "Copiar" e botão **"Enviar comprovativo pelo WhatsApp"** com mensagem pré-preenchida com o código. — ✅ 2026-10-20 (`src/components/payments/payment-instructions.tsx`)
+- [x] ❌ **8.4** ~~Envio do comprovativo pelo site (upload)~~ — **descartado (D12)**: o comprovativo vai pelo WhatsApp do organizador. As colunas `proof_url`/`proof_hash` ficam sem uso.
+- [x] **8.5** Painel → **Pagamentos** (`/admin/pagamentos`): separadores *Por confirmar / Rejeitados / Confirmados / Todos*, filtro por evento, pesquisa por código, nome, telemóvel ou dorsal; botões **Confirmar** (com nº da operação opcional), **Recebi o comprovativo**, **Rejeitar** (motivo obrigatório) e **Falar com o atleta** (WhatsApp). Confirmar é uma transacção com update condicional (testado: duas pessoas a confirmar ao mesmo tempo → só uma confirma) e atribui o dorsal (7.2). Se a inscrição já tinha expirado e ainda houver vaga, volta a ocupá-la. Tudo fica em `audit_logs`. — ✅ 2026-10-20
+- [x] **8.6** Detecção de comprovativo repetido pelo **nº da operação** (`transactionRef`): aviso com o código da inscrição onde já foi usado e opção "Confirmar mesmo assim". — ✅ 2026-10-20
+- [x] **8.7** Pagamento registado pelo admin/organizador para quem pagou presencialmente ou enviou por WhatsApp. — ✅ 2026-10-20 (é o próprio "Confirmar" do 8.5 — não é preciso anexar nada)
+- [x] **8.8** Exportação **CSV** dos pagamentos de um evento (código, atleta, telemóvel, distância, dorsal, método, valor, estado, nº operação, data de confirmação), para conferir com o extracto bancário. Os contadores por estado aparecem nos separadores. — ✅ 2026-10-20
+  - [ ] Totais em Kz por método e por estado no topo da página (opcional).
+- [ ] **8.9** Adaptar o frontend (que simulava pagamento automático e "Referência Multicaixa"):
+  - [x] `src/lib/types.ts` / `src/lib/format.ts` → 4 métodos manuais e estados do pagamento — ✅ 2026-10-20
+  - [x] Assistente de inscrição → 4 métodos, ecrã final com instruções e botão WhatsApp — ✅ 2026-10-20
+  - [x] Perfil (`registrations-list.tsx`, `profile-overview.tsx`) → "Como pagar", estado do pagamento e motivo da rejeição — ✅ 2026-10-20
+  - [x] Textos: FAQ de pagamentos, termos, regulamento-base (e os 12 regulamentos já gravados na BD), "Como funciona" da Home e da Ajuda, nota de preços na página do evento — ✅ 2026-10-20
+  - [ ] `components/admin/registrations-manager.tsx` (página **Inscrições** do painel) ainda usa dados mock e tem um "Confirmar pagamento" falso → passa para a BD na **Fase 9**; até lá, usar **Pagamentos**. As definições de pagamento do `settings-form.tsx` foram substituídas por `/admin/pagamentos/contas`.
+- [x] **8.10** Testes ponta a ponta no browser: inscrição → botão WhatsApp com o número certo; "Recebi o comprovativo"; confirmação dupla em simultâneo; comprovativo repetido; rejeição com motivo visível para o atleta; organizador só vê os seus eventos; WhatsApp próprio do evento; exportação CSV pelo admin. — ✅ 2026-10-20
 
 ### Futuro — pagamento automático (não fazer agora)
 
@@ -485,25 +469,26 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
 
 ---
 
-## Fase 9 — Admin real + upload de ficheiros
+## Fase 9 — Admin real + upload de ficheiros 🟡
 
-- [ ] **9.1** Criar *buckets* no Supabase Storage:
+- [x] **9.1** Criar *buckets* no Supabase Storage: — ✅ 2026-10-20 (um bucket público **`media`**, criado automaticamente no 1.º upload, com pastas `imagens/` e `documentos/`; comprovativos não são precisos — D12)
   - `cartazes`, `banners`, `patrocinadores` → **públicos** (só leitura)
   - `regulamentos`, `percursos` (PDF/GPX) → públicos
-  - `comprovativos` → **privado** (só o admin e o organizador do evento vêem, com URLs assinados)
-- [ ] **9.2** Upload feito no servidor (Server Action com o cliente admin) ou com URLs assinados de upload. Validar o tipo e o tamanho (ex.: imagens ≤ 5 MB, PDF ≤ 10 MB).
-- [ ] **9.3** Acrescentar o domínio do Supabase Storage a `images.remotePatterns` no `next.config.ts`.
-- [ ] **9.4** Substituir `components/admin/admin-store.tsx` por Server Actions em `src/server/actions/admin/*`, cada uma a começar pela verificação de permissões (6.9) e a escrever no `AuditLog`:
-  - [ ] Eventos — criar / editar / duplicar (organizador: os seus) · **pedir publicação** (organizador) · **publicar** (só admin, D11) · cancelar (eventos com inscrições não se apagam) · equipa do evento (`event_staff`) · contas de recebimento (8.1)
-  - [ ] Inscrições — kit levantado, editar dorsal, cancelar, exportar CSV (a confirmação de pagamentos está na tarefa 8.5)
-  - [ ] Utilizadores — promover a organizador / admin, activar / desactivar, ver pedidos "organizar" vindos do contacto
-  - [ ] Banners — CRUD + ordenar
-  - [ ] Patrocinadores — CRUD
-  - [ ] Categorias — editar
-  - [ ] Definições — gravar em `SiteSetting`; o rodapé e os contactos passam a ler daqui
-- [ ] **9.5** Painel (`dashboard.tsx`): calcular os indicadores com consultas agregadas (`groupBy`, `aggregate`).
+  - ~~`comprovativos`~~ → não é preciso (D12: comprovativos pelo WhatsApp)
+- [x] **9.2** Upload feito no servidor (Server Action com o cliente admin) ou com URLs assinados de upload. Validar o tipo e o tamanho (ex.: imagens ≤ 5 MB, PDF ≤ 10 MB). — ✅ 2026-10-20 (`src/server/actions/uploads.ts`: imagens ≤ 5 MB, PDF/GPX ≤ 10 MB; só admin/organizador; `bodySizeLimit` 6 MB no `next.config.ts`)
+- [x] **9.3** Acrescentar o domínio do Supabase Storage a `images.remotePatterns` no `next.config.ts`. — ✅ 2026-10-20
+- [x] **9.4** Substituir `components/admin/admin-store.tsx` por Server Actions em `src/server/actions/admin/*`, cada uma a começar pela verificação de permissões (6.9) e a escrever no `AuditLog`: — ✅ 2026-10-20 — feito **sem reescrever as páginas**: o `admin-store.tsx` mantém a mesma interface, mas recebe os dados da BD (`src/server/queries/admin.ts`, filtrados por permissão) e grava tudo por uma única action, `src/server/actions/admin.ts` (com permissões e `audit_logs`). Gravar um evento completo demora ~4 s.
+  - [x] Eventos — criar / editar / duplicar (organizador: os seus) · **pedir publicação** (organizador) · **publicar** (só admin, D11) · cancelar (eventos com inscrições não se apagam) · equipa do evento (`event_staff`) · contas de recebimento (8.1) — ✅ 2026-10-20
+  - [x] Inscrições — kit levantado, editar dorsal, cancelar, exportar CSV (a confirmação de pagamentos está na tarefa 8.5) — ✅ 2026-10-20
+  - [x] Utilizadores — promover a organizador / admin, activar / desactivar, ver pedidos "organizar" vindos do contacto — ✅ 2026-10-20
+  - [x] Banners — CRUD + ordenar — ✅ 2026-10-20
+  - [x] Patrocinadores — CRUD — ✅ 2026-10-20
+  - [x] Categorias — editar — ✅ 2026-10-20
+  - [x] Definições — gravar em `SiteSetting`; o rodapé e os contactos passam a ler daqui — ✅ 2026-10-20 (gravam em `site_settings` → `site`). ⚠️ O rodapé e a página de contacto ainda têm os contactos escritos no código — ligar a `site_settings` (tarefa 9.9)
+- [x] **9.5** Painel (`dashboard.tsx`): calcular os indicadores com consultas agregadas (`groupBy`, `aggregate`). — ✅ 2026-10-20 (os indicadores são calculados a partir dos dados reais do evento/organizador; agregar no servidor só se o volume crescer)
 - [ ] ❌ **9.6** ~~Revalidar páginas públicas após alterações~~ — não é preciso: as páginas são dinâmicas (D4).
-- [ ] **9.7** Migrar as imagens de `public/images/` para os buckets e actualizar os URLs na BD.
+- [ ] ⏸️ **9.7** Migrar as imagens de `public/images/` para os buckets e actualizar os URLs na BD. — adiado: as imagens de demonstração em `public/images/` continuam a funcionar; as novas já vão para o Storage.
+- [ ] **9.9** Rodapé, contactos e redes sociais do site lidos de `site_settings` (hoje estão no código).
 - [ ] **9.8** Formulário de contacto (`contact-form.tsx`) grava em `ContactMessage` e cria a caixa de mensagens no admin. Os pedidos com assunto "organizar" aparecem destacados, com o botão "Promover a organizador".
 
 ---
@@ -561,6 +546,7 @@ Regra do projecto: aplica-se sempre a **opção recomendada**, regista-se aqui c
 | D9 | Contas de recebimento | Uma conta única da AeroTiming para todos os eventos, ou contas diferentes por evento/organizador? (Por omissão: única, em `SiteSetting`) | ✅ 2026-10-20 (actualizada): **contas por evento** (`Event.paymentAccounts`, as do organizador), com as **contas da AeroTiming como alternativa** (`site_settings`). Motivo: como o organizador confirma pagamentos (D10), o dinheiro tem de entrar numa conta que ele consegue consultar. |
 | D10 | Quem confirma pagamentos | Só o admin, ou também o organizador do evento? (ligado a D5) | ✅ 2026-10-20 (actualizada): **o admin e o organizador do evento** confirmam pagamentos. Fica registado quem confirmou (`confirmedById` + `audit_logs`). |
 | D11 | Quem publica eventos | O organizador publica sozinho ou o admin aprova? | ✅ 2026-10-20 (recomendado): o organizador cria em rascunho e pede publicação; **o admin publica**. Evita eventos falsos a receber inscrições e dinheiro. |
+| D12 | Envio do comprovativo | Pelo site (upload) ou fora do site? | ✅ 2026-10-20 (decidido pelo responsável): **pelo WhatsApp do organizador**, fora do site. O site mostra o botão "Enviar comprovativo pelo WhatsApp" com o código; o organizador confirma no painel. Upload descartado. |
 
 ---
 
@@ -637,3 +623,5 @@ src/
 | 2026-10-20 | — | Fase 6: login real com Supabase Auth (e-mail + palavra-passe), sessão em cookies via `src/proxy.ts`, utilizador lido no servidor (`getClaims`), registo num só passo, recuperação por link de e-mail, perfil e segurança gravam na BD, apagar conta. Protecção no servidor de `/perfil` e `/admin` (organizador sem áreas de admin). Contas de demonstração antigas retiradas do login. |
 | 2026-10-20 | — | Fase 6 concluída: Site URL e Redirect URLs configuradas e "Confirm email" desligado em dev (feito pelo responsável). Fluxo de recuperação testado ponta a ponta com link `token_hash`; modelo de e-mail em português recomendado na 6.4. |
 | 2026-10-20 | — | Fase 7 concluída: inscrição real (exige conta; validação e preço no servidor; vagas e códigos atómicos), "Para mim / Para outra pessoa", "As minhas inscrições" com dados reais e cancelamento, check-in de kits em `/checkin`, expiração automática (`/api/cron/expirar-inscricoes` + `CRON_SECRET`), alertas de abertura. Adiantado da Fase 8: 4 métodos manuais e instruções de pagamento (8.2, 8.3, parte da 8.9). |
+| 2026-10-20 | — | Fase 8 concluída. Decisão D12: comprovativo pelo WhatsApp do organizador (sem upload). Página `/admin/pagamentos` (confirmar/rejeitar/"recebi o comprovativo"/CSV) e `/admin/pagamentos/contas` (contas e WhatsApp por evento ou da AeroTiming). Textos do site actualizados para pagamento manual. |
+| 2026-10-20 | — | Fase 9: painel com dados reais (eventos, inscrições, resultados, utilizadores, banners, patrocinadores, categorias, definições) via `admin-store` + `adminMutate`; uploads para o Supabase Storage (bucket `media`); organizador só vê os seus eventos e cria em rascunho; mocks movidos para `prisma/seed-data/` (5.12). Testado: lista real, edição de evento reflectida no site, banner com imagem no Storage na Home. |

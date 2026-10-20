@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, CreditCard, Hash, MapPin, QrCode, Route, Ticket, XCircle } from "lucide-react";
-import { WhatsAppIcon, WHATSAPP_NUMBER } from "@/components/layout/social-icons";
-import { PaymentInstructions } from "@/components/payments/payment-instructions";
+import { PaymentInstructions, ProofWhatsAppButton } from "@/components/payments/payment-instructions";
 import { cancelRegistration } from "@/server/actions/registrations";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -205,30 +204,18 @@ export function RegistrationsList({ registrations: regs, today: TODAY }: { regis
         onClose={() => setPay(null)}
         title="Pagar a inscrição"
         description={pay ? `${pay.event.title} · ${pay.distance?.name ?? ""}` : undefined}
-        footer={
-          pay && (
-            <a
-              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Envio o comprovativo da inscrição ${pay.code} (${pay.event.title}).`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-4 font-semibold text-white hover:brightness-95"
-            >
-              <WhatsAppIcon className="size-5" /> Enviar comprovativo pelo WhatsApp
-            </a>
-          )
-        }
+        footer={pay && <ProofWhatsAppButton whatsapp={pay.accounts?.whatsapp} code={pay.code} eventTitle={pay.event.title} />}
       >
         {pay && (
           <div className="space-y-4 p-5 sm:p-6">
             {pay.payment.state === "em-analise" && (
-              <p className="rounded-xl bg-sky-50 px-4 py-3 text-[15px] text-sky-900 ring-1 ring-sky-200">Já recebemos o seu comprovativo. A organização está a confirmar o pagamento.</p>
+              <p className="rounded-xl bg-sky-50 px-4 py-3 text-[15px] text-sky-900 ring-1 ring-sky-200">A organização já recebeu o seu comprovativo e está a confirmar o pagamento.</p>
             )}
             {pay.accounts ? (
-              <PaymentInstructions method={pay.payment.method} amount={pay.payment.amount} code={pay.code} accounts={pay.accounts} expiresAt={pay.payment.state === "pendente" ? pay.payment.expiresAt : undefined} />
+              <PaymentInstructions method={pay.payment.method} amount={pay.payment.amount} code={pay.code} accounts={pay.accounts} eventTitle={pay.event.title} expiresAt={pay.payment.state === "pendente" ? pay.payment.expiresAt : undefined} />
             ) : (
               <p className="text-[15px] text-ink-700">Valor: <strong>{formatKz(pay.payment.amount)}</strong> · Código: <strong>{pay.code}</strong></p>
             )}
-            <p className="text-sm text-ink-500">Em breve vai poder enviar o comprovativo aqui mesmo. Por agora, envie-o pelo WhatsApp com o código da inscrição.</p>
           </div>
         )}
       </Modal>

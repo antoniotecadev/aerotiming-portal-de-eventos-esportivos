@@ -17,8 +17,8 @@ import type {
   ResultStatus,
   TShirtSize,
 } from "../src/generated/prisma/enums";
-import { BANNERS, CATEGORIES, EVENTS, PARTICIPANTS, REGISTRATIONS, RESULTS, SPONSORS } from "../src/lib/data";
-import { seeded } from "../src/lib/data/helpers";
+import { BANNERS, CATEGORIES, EVENTS, PARTICIPANTS, REGISTRATIONS, RESULTS, SPONSORS } from "./seed-data";
+import { seeded } from "../src/lib/route-helpers";
 import type { EventDistance, Participant } from "../src/lib/types";
 
 // ───────────── Configuração ─────────────
@@ -165,6 +165,7 @@ async function seedCatalog() {
         multicaixaExpress: { phone: "+244923000000", holder: "AeroTiming, Lda." },
         kwik: { id: "923000000", holder: "AeroTiming, Lda." },
         depositInstructions: "Depósito em qualquer balcão do Banco Palanca, para o IBAN indicado. Escreva o código da inscrição no talão.",
+        whatsapp: "244923000000", // para onde os atletas enviam o comprovativo
         proofDeadlineHours: 72,
       },
     },

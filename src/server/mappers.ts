@@ -81,7 +81,8 @@ export function mapSponsor(s: Prisma.SponsorGetPayload<object>): Sponsor {
   return { id: s.id, name: s.name, logo: s.logoUrl, url: s.url ?? "#", tier: s.tier, active: s.active };
 }
 
-export function mapEvent(row: EventListRow | EventDetailRow, today: string): SportsEvent {
+/** `editorial`: devolve o estado guardado na BD (para o painel) em vez do estado calculado para o público. */
+export function mapEvent(row: EventListRow | EventDetailRow, today: string, opts: { editorial?: boolean } = {}): SportsEvent {
   const detail = "kitPickups" in row ? (row as EventDetailRow) : null;
 
   const distances: SportsEvent["distances"] = row.distances.map((d) => ({
@@ -113,7 +114,7 @@ export function mapEvent(row: EventListRow | EventDetailRow, today: string): Spo
     mapUrl: row.mapUrl ?? `https://maps.google.com/?q=${encodeURIComponent(`${row.venue}, ${row.city}`)}`,
     poster: row.posterUrl,
     cover: row.coverUrl,
-    status: publicStatus(row, today),
+    status: opts.editorial ? toUi<EventStatus>(row.status === "rascunho" ? "brevemente" : row.status) : publicStatus(row, today),
     registrationOpens: toDay(row.registrationOpens),
     registrationCloses: toDay(row.registrationCloses),
     summary: row.summary,

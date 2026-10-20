@@ -81,7 +81,7 @@ export const REGISTRATION_STATUS: Record<RegistrationStatus, { label: string; to
 
 export const PAYMENT_STATE: Record<PaymentState, { label: string; tone: "green" | "amber" | "red" | "blue" | "gray" }> = {
   pendente: { label: "Por pagar", tone: "amber" },
-  "em-analise": { label: "Comprovativo em análise", tone: "blue" },
+  "em-analise": { label: "Comprovativo recebido", tone: "blue" },
   confirmado: { label: "Pago", tone: "green" },
   rejeitado: { label: "Comprovativo rejeitado", tone: "red" },
   expirado: { label: "Prazo expirado", tone: "gray" },

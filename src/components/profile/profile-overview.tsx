@@ -44,12 +44,12 @@ export function ProfileOverview({ registrations: regs, results, today }: { regis
                 <p className="font-bold text-amber-900">Falta pagar a sua inscrição</p>
                 <p className="text-[15px] text-amber-900/80">
                   {p.event.title} · {p.distance?.name}.{" "}
-                  Pague e envie o comprovativo em <Link href="/perfil/inscricoes" className="font-semibold underline">As minhas inscrições</Link>.
+                  Pague e envie o comprovativo pelo WhatsApp da organização (botão abaixo).
                 </p>
               </div>
             </div>
             <div className="p-5 sm:p-6">
-              {p.accounts && <PaymentInstructions method={p.payment.method} amount={p.payment.amount} code={p.code} accounts={p.accounts} expiresAt={p.payment.expiresAt} />}
+              {p.accounts && <PaymentInstructions method={p.payment.method} amount={p.payment.amount} code={p.code} accounts={p.accounts} expiresAt={p.payment.expiresAt} eventTitle={p.event.title} />}
             </div>
           </Card>
         ))}

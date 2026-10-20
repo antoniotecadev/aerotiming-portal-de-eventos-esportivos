@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 const STEPS = [
   { Icon: Search, title: "Escolha a prova", text: "Procure por nome, modalidade ou província e veja todos os detalhes." },
   { Icon: UserPlus, title: "Preencha os dados", text: "Só precisa do nome, BI e telemóvel. Demora menos de 3 minutos." },
-  { Icon: CreditCard, title: "Pague com Multicaixa", text: "Multicaixa Express, referência no ATM ou transferência." },
+  { Icon: CreditCard, title: "Pague e envie o comprovativo", text: "Multicaixa Express, transferência, depósito ou KWiK. Envie o comprovativo pelo WhatsApp." },
   { Icon: Medal, title: "Levante o kit e corra", text: "Mostre o bilhete no telemóvel, receba o dorsal e divirta-se!" },
 ];
 

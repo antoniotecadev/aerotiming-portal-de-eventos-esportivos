@@ -229,7 +229,7 @@ export default async function EventPage({ params }: Props) {
               })}
             </div>
             <p className="mt-5 flex items-start gap-2 rounded-xl bg-sky-50 p-4 text-[15px] text-sky-900">
-              <AlertCircle className="mt-0.5 size-5 shrink-0" /> O preço inclui o kit do atleta, dorsal com chip, seguro, abastecimentos e medalha para quem terminar. Pagamento em Kwanzas por Multicaixa Express, referência Multicaixa ou transferência.
+              <AlertCircle className="mt-0.5 size-5 shrink-0" /> O preço inclui o kit do atleta, dorsal com chip, seguro, abastecimentos e medalha para quem terminar. Pagamento em Kwanzas por Multicaixa Express, transferência, depósito ou KWiK; envia o comprovativo pelo WhatsApp e a organização confirma.
             </p>
           </Section>
 
@@ -370,7 +370,7 @@ export default async function EventPage({ params }: Props) {
               <li className="flex items-center gap-2"><Users className="size-4.5 text-ink-400" />{participants.length} inscritos</li>
             </ul>
             <CTA className="w-full" />
-            <p className="flex items-center justify-center gap-1.5 text-xs text-ink-500"><ShieldCheck className="size-4 text-emerald-600" /> Pagamento seguro com Multicaixa</p>
+            <p className="flex items-center justify-center gap-1.5 text-xs text-ink-500"><ShieldCheck className="size-4 text-emerald-600" /> Vaga reservada enquanto paga</p>
           </div>
         </aside>
       </div>

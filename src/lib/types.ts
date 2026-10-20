@@ -190,6 +190,8 @@ export interface PaymentAccounts {
   multicaixaExpress?: { phone: string; holder: string };
   kwik?: { id: string; holder: string };
   depositInstructions?: string;
+  /** WhatsApp (só dígitos, com 244) para onde o atleta envia o comprovativo — do organizador do evento. */
+  whatsapp?: string;
   proofDeadlineHours: number;
 }
 
