@@ -17,12 +17,13 @@ const GUIDE = [
   { Icon: MousePointerClick, title: "Escolha a prova", text: "Abra «Eventos» e toque na prova que quer fazer." },
   { Icon: Route, title: "Escolha a distância", text: "Toque em «Inscrever-me» e escolha, por exemplo, 5 km ou 10 km." },
   { Icon: CreditCard, title: "Pague", text: "Multicaixa Express, transferência, depósito ou KWiK — e envie o comprovativo pelo WhatsApp." },
-  { Icon: Ticket, title: "Receba o bilhete", text: "Chega por SMS e fica na sua conta. Mostre-o no levantamento do kit." },
+  { Icon: Ticket, title: "Receba o bilhete", text: "Quando o pagamento for confirmado, fica na sua conta com o dorsal. Mostre-o no levantamento do kit." },
 ];
 
 export default async function AjudaPage() {
   const settings = await getSiteSettings();
-  const wa = whatsappHref(settings.whatsapp || settings.phone, `Olá! Preciso de ajuda com o site ${settings.siteName}.`);
+  const waNumber = settings.whatsapp || settings.phone;
+  const wa = waNumber ? whatsappHref(waNumber, `Olá! Preciso de ajuda com o site ${settings.siteName}.`) : "/contacto";
   return (
     <>
       <PageHeader eyebrow="Centro de ajuda" title="Como podemos ajudar?" description="Respostas simples às dúvidas mais comuns. Se não encontrar o que procura, fale connosco." />
@@ -82,11 +83,13 @@ export default async function AjudaPage() {
           </div>
           <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
             <ButtonLink href={wa} target="_blank" rel="noopener noreferrer" variant="white" size="lg">
-              <WhatsAppIcon /> Falar no WhatsApp
+              <WhatsAppIcon /> {waNumber ? "Falar no WhatsApp" : "Falar connosco"}
             </ButtonLink>
-            <ButtonLink href={telHref(settings.phone)} variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
-              <Phone /> Ligar {localPhone(settings.phone)}
-            </ButtonLink>
+            {settings.phone && (
+              <ButtonLink href={telHref(settings.phone)} variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
+                <Phone /> Ligar {localPhone(settings.phone)}
+              </ButtonLink>
+            )}
           </div>
         </div>
         <p className="mt-4 text-center text-sm text-ink-500">

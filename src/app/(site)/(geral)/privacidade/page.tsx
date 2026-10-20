@@ -1,14 +1,19 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/info/legal-page";
+import { legalEntity, privacyContact, privacyEmail } from "@/lib/site";
+import { getSiteSettings } from "@/server/queries/site";
+import { HEALTH_RETENTION_DAYS } from "@/server/privacy";
 
 export const metadata: Metadata = { title: "Política de privacidade", description: "Como a ConexãoSport recolhe, usa e protege os seus dados pessoais." };
 
-export default function PrivacidadePage() {
+export default async function PrivacidadePage() {
+  const s = await getSiteSettings();
   return (
     <LegalPage
+      contactEmail={privacyEmail(s)}
       title="Política de privacidade"
       description="Como recolhemos, usamos e protegemos os seus dados pessoais, de acordo com a Lei n.º 22/11 de Protecção de Dados Pessoais de Angola."
-      updated="1 de Setembro de 2026"
+      updated="20 de Outubro de 2026"
       summary={[
         "Só pedimos os dados necessários para a sua inscrição e para a sua segurança na prova.",
         "Nunca vendemos os seus dados.",
@@ -20,8 +25,8 @@ export default function PrivacidadePage() {
           id: "responsavel",
           title: "Quem é o responsável pelos dados",
           body: [
-            "O responsável pelo tratamento dos dados é a ConexãoSport, Lda., com sede em Luanda. Tratamos os seus dados de acordo com a Lei n.º 22/11, de 17 de Junho, Lei da Protecção de Dados Pessoais, e com as orientações da Agência de Protecção de Dados (APD).",
-            "Para qualquer questão sobre privacidade, escreva para privacidade@conexaosport.ao.",
+            `O responsável pelo tratamento dos dados é a ${legalEntity(s)}, com sede em ${s.address || "Luanda, Angola"}. Tratamos os seus dados de acordo com a Lei n.º 22/11, de 17 de Junho, Lei da Protecção de Dados Pessoais, e com as orientações da Agência de Protecção de Dados (APD).`,
+            `Para qualquer questão sobre privacidade, fale connosco ${privacyContact(s)}.`,
           ],
         },
         {
@@ -63,7 +68,13 @@ export default function PrivacidadePage() {
           id: "conservacao",
           title: "Durante quanto tempo guardamos",
           body: [
-            "Guardamos os dados da conta enquanto a mantiver activa. Os dados de inscrição e pagamento são guardados pelo prazo exigido pela lei fiscal. Os resultados desportivos são mantidos como registo histórico das provas.",
+            "Guardamos os dados da conta enquanto a mantiver activa.",
+            [
+              `Dados de saúde (grupo sanguíneo, observações médicas) e contacto de emergência: só servem para o dia da prova e são apagados automaticamente ${HEALTH_RETENTION_DAYS} dias depois do evento.`,
+              "Dados de inscrição e pagamento (valores, datas, código da inscrição): guardados pelo prazo exigido pela lei fiscal.",
+              "Resultados desportivos (nome, dorsal, clube, escalão e tempos): mantidos como registo histórico das provas.",
+            ],
+            "Se apagar a conta, cancelamos as inscrições em provas futuras e apagamos o documento de identificação, os contactos, a data de nascimento exacta, o contacto de emergência e os dados de saúde de todas as suas inscrições. Ficam apenas o nome e os resultados na classificação das provas em que participou.",
           ],
         },
         {
@@ -72,13 +83,13 @@ export default function PrivacidadePage() {
           body: [
             "Nos termos da Lei n.º 22/11, tem direito a:",
             [
-              "Saber que dados temos sobre si (direito de acesso).",
+              "Saber que dados temos sobre si e recebê-los num ficheiro (direito de acesso e portabilidade) — em «O meu perfil» → «Segurança» → «Descarregar os meus dados».",
               "Corrigir dados errados ou desactualizados (direito de rectificação).",
-              "Pedir que apaguemos os seus dados (direito de eliminação).",
+              "Pedir que apaguemos os seus dados (direito de eliminação) — em «O meu perfil» → «Segurança» → «Apagar a minha conta».",
               "Opor-se ao uso dos dados para marketing, a qualquer momento.",
               "Apresentar queixa à Agência de Protecção de Dados (APD).",
             ],
-            "Pode exercer a maioria destes direitos na sua área pessoal, em «O meu perfil», ou escrevendo para privacidade@conexaosport.ao. Respondemos no prazo máximo de 30 dias.",
+            `Pode exercer a maioria destes direitos na sua área pessoal, em «O meu perfil», ou ${privacyContact(s)}. Respondemos no prazo máximo de 30 dias.`,
           ],
         },
         {

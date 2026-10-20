@@ -165,7 +165,7 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm font-semibold text-ink-300">
             <span className="flex items-center gap-2"><ShieldCheck className="size-5 text-emerald-400" /> Pagamento seguro</span>
             <span className="flex items-center gap-2"><Smartphone className="size-5 text-sky-400" /> Bilhete no telemóvel</span>
-            <span className="flex items-center gap-2"><BadgeCheck className="size-5 text-sun-400" /> Confirmação por SMS</span>
+            <span className="flex items-center gap-2"><BadgeCheck className="size-5 text-sun-400" /> Resultados e certificado online</span>
           </div>
         </div>
       </section>

@@ -25,18 +25,13 @@ import { PageHeader, SectionHeading } from "@/components/ui/section-heading";
 import { WhatsAppIcon } from "@/components/layout/social-icons";
 import { localPhone, telHref, whatsappHref } from "@/lib/site";
 import { getSiteSettings } from "@/server/queries/site";
+import { getSiteStats } from "@/server/queries/events";
 
 export const metadata: Metadata = {
   title: "Sobre nós",
   description: "A ConexãoSport faz cronometragem electrónica e inscrições online para corridas, ciclismo, trail e caminhadas em Angola.",
 };
 
-const NUMBERS = [
-  { value: "180+", label: "eventos cronometrados", Icon: Timer },
-  { value: "65 000", label: "atletas inscritos", Icon: Users },
-  { value: "14", label: "províncias com provas", Icon: MapPinned },
-  { value: "99,8%", label: "tempos registados com sucesso", Icon: BarChart3 },
-];
 
 const STEPS = [
   {
@@ -52,7 +47,7 @@ const STEPS = [
   {
     Icon: Smartphone,
     title: "3. Vê o resultado no telemóvel",
-    text: "Minutos depois de cortar a meta, o seu tempo, ritmo e posição aparecem no site. Também recebe um SMS com o resultado.",
+    text: "Minutos depois de cortar a meta, o seu tempo, ritmo e posição aparecem no site. E pode descarregar o certificado em PDF.",
   },
 ];
 
@@ -64,7 +59,7 @@ const VALUES = [
 ];
 
 const BENEFITS = [
-  { Icon: CreditCard, title: "Inscrições e pagamentos online", text: "Multicaixa Express, referência e transferência, com confirmação automática por SMS." },
+  { Icon: CreditCard, title: "Inscrições e pagamentos online", text: "Multicaixa Express, transferência, depósito ou KWiK, com o pagamento confirmado pela organização e o dorsal atribuído na hora." },
   { Icon: Timer, title: "Cronometragem electrónica", text: "Chips, tapetes, relógios de meta e equipa técnica no dia da prova." },
   { Icon: Trophy, title: "Resultados em tempo real", text: "Classificações por sexo e escalão publicadas em minutos, com diplomas digitais." },
   { Icon: Megaphone, title: "Divulgação do evento", text: "Página do evento no nosso calendário, destaque na página inicial e nas redes sociais." },
@@ -73,7 +68,15 @@ const BENEFITS = [
 ];
 
 export default async function SobrePage() {
-  const settings = await getSiteSettings();
+  const [settings, stats] = await Promise.all([getSiteSettings(), getSiteStats()]);
+  const n = (v: number) => v.toLocaleString("pt-PT");
+  // Números reais da base de dados; a faixa só aparece depois da primeira prova realizada
+  const numbers = [
+    { value: n(stats.eventsDone), label: stats.eventsDone === 1 ? "prova realizada" : "provas realizadas", Icon: Timer },
+    { value: n(stats.athletes), label: "inscrições confirmadas", Icon: Users },
+    { value: n(stats.finishers), label: "atletas na meta", Icon: BarChart3 },
+    { value: n(stats.provinces), label: stats.provinces === 1 ? "província com provas" : "províncias com provas", Icon: MapPinned },
+  ];
   return (
     <>
       <PageHeader
@@ -107,10 +110,11 @@ export default async function SobrePage() {
       </section>
 
       {/* Números */}
+      {stats.eventsDone > 0 && (
       <section className="bg-white py-12">
         <div className="container-page">
           <ul className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {NUMBERS.map(({ value, label, Icon }) => (
+            {numbers.map(({ value, label, Icon }) => (
               <li key={label} className="rounded-2xl bg-ink-50 p-5 text-center sm:p-6">
                 <Icon className="mx-auto size-7 text-brand-600" />
                 <p className="mt-2 font-display text-4xl font-extrabold text-ink-900 tabular sm:text-5xl">{value}</p>
@@ -120,6 +124,7 @@ export default async function SobrePage() {
           </ul>
         </div>
       </section>
+      )}
 
       {/* Como funciona a cronometragem */}
       <section className="container-page py-14 lg:py-20">
@@ -204,18 +209,22 @@ export default async function SobrePage() {
                 <ButtonLink href="/contacto?assunto=organizar" variant="white" size="lg">
                   <Mail /> Pedir orçamento
                 </ButtonLink>
-                <ButtonLink
-                  href={whatsappHref(settings.whatsapp || settings.phone, `Olá! Quero organizar um evento com a ${settings.siteName}.`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="dark"
-                  size="lg"
-                >
-                  <WhatsAppIcon /> Falar no WhatsApp
-                </ButtonLink>
-                <ButtonLink href={telHref(settings.phone)} variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
-                  <Phone /> {localPhone(settings.phone)}
-                </ButtonLink>
+                {(settings.whatsapp || settings.phone) && (
+                  <ButtonLink
+                    href={whatsappHref(settings.whatsapp || settings.phone, `Olá! Quero organizar um evento com a ${settings.siteName}.`)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="dark"
+                    size="lg"
+                  >
+                    <WhatsAppIcon /> Falar no WhatsApp
+                  </ButtonLink>
+                )}
+                {settings.phone && (
+                  <ButtonLink href={telHref(settings.phone)} variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
+                    <Phone /> {localPhone(settings.phone)}
+                  </ButtonLink>
+                )}
               </div>
             </div>
           </div>

@@ -9,6 +9,8 @@ import type { AdminEvent, AdminParticipant, SiteSettings } from "@/components/ad
 import { getCurrentUser, hasRole } from "../auth";
 import { canManageEvent } from "../permissions";
 import { releaseSlot } from "../registrations";
+import { checkBanner, checkCategory, checkEvent, checkSponsor, checkUser, cleanSettings } from "../admin-validate";
+import { eraseRegistrationsOf } from "../privacy";
 import { recomputeRankings } from "../results";
 import { confirmPayment } from "./payments";
 
@@ -126,6 +128,12 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
         const slugs = [...new Set(op.upsert.map((r) => r.eventSlug))];
         const events = await prisma.event.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true, distances: { select: { id: true, code: true } } } });
         for (const e of events) if (!(await canManageEvent(me, e.id))) fail("Sem permissão para os resultados deste evento.");
+        // Os ids de resultados já existentes podem pertencer a outro evento: exigir permissão sobre o evento ACTUAL (12.4, M1)
+        const existingRows = op.upsert.length ? await prisma.result.findMany({ where: { id: { in: op.upsert.map((r) => r.id) } }, select: { id: true, eventId: true } }) : [];
+        for (const row of existingRows) {
+          const target = events.find((e) => e.slug === op.upsert.find((r) => r.id === row.id)?.eventSlug);
+          if (!target || row.eventId !== target.id) fail("Este resultado pertence a outro evento.");
+        }
         const removed = op.removeIds.length ? await prisma.result.findMany({ where: { id: { in: op.removeIds } }, select: { eventId: true, distanceId: true } }) : [];
         for (const eventId of new Set(removed.map((o) => o.eventId))) if (!(await canManageEvent(me, eventId))) fail("Sem permissão para os resultados deste evento.");
         // Inscrições por dorsal lidas de uma vez (para ligar cada resultado ao perfil do atleta)
@@ -175,6 +183,8 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
       case "user.save": {
         adminOnly();
         const u = op.user;
+        const invalidUser = checkUser(u);
+        if (invalidUser) fail(invalidUser);
         const phone = u.phone ? `+244${u.phone.replace(/\D/g, "").replace(/^244(?=\d{9}$)/, "")}` : null;
         if (op.isNew) {
           const password = randomBytes(6).toString("base64url");
@@ -192,9 +202,11 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
       case "user.remove": {
         adminOnly();
         if (op.id === me.id) fail("Não pode eliminar a sua própria conta aqui.");
+        // Como no "Apagar conta" do próprio: cancela as inscrições futuras e anonimiza as passadas (12.5)
+        const erased = await eraseRegistrationsOf(op.id);
         const { error } = await createAdminClient().auth.admin.deleteUser(op.id);
         if (error) fail("Não foi possível eliminar a conta.");
-        await audit("user.delete", "profile", op.id);
+        await audit("user.delete", "profile", op.id, erased);
         return { ok: true };
       }
 
@@ -202,6 +214,8 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
       case "banner.save": {
         adminOnly();
         const b = op.banner;
+        const invalidBanner = checkBanner(b);
+        if (invalidBanner) fail(invalidBanner);
         if (b.image.startsWith("blob:")) fail("A imagem não foi carregada. Volte a escolher a imagem.");
         const data = { title: b.title, subtitle: b.subtitle, imageUrl: b.image, ctaLabel: b.ctaLabel, href: b.href, kind: b.kind, active: b.active, sortOrder: b.order };
         await prisma.banner.upsert({ where: { id: b.id }, create: { id: b.id, ...data }, update: data });
@@ -218,6 +232,8 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
       case "sponsor.save": {
         adminOnly();
         const s = op.sponsor;
+        const invalidSponsor = checkSponsor(s);
+        if (invalidSponsor) fail(invalidSponsor);
         if (s.logo.startsWith("blob:")) fail("O logótipo não foi carregado. Volte a escolher a imagem.");
         const data = { name: s.name, logoUrl: s.logo, url: s.url || null, tier: s.tier, active: s.active };
         await prisma.sponsor.upsert({ where: { id: s.id }, create: { id: s.id, ...data }, update: data });
@@ -227,19 +243,22 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
         adminOnly();
         await prisma.sponsor.delete({ where: { id: op.id } });
         return { ok: true };
-      case "category.update":
+      case "category.update": {
         adminOnly();
+        const invalidCategory = checkCategory(op.patch);
+        if (invalidCategory) fail(invalidCategory);
         await prisma.category.update({ where: { slug: op.slug }, data: { name: op.patch.name, description: op.patch.description } });
         return { ok: true };
-      case "settings.save":
+      }
+      case "settings.save": {
         adminOnly();
-        await prisma.siteSetting.upsert({
-          where: { key: "site" },
-          create: { key: "site", value: op.settings as unknown as Prisma.InputJsonValue },
-          update: { value: op.settings as unknown as Prisma.InputJsonValue },
-        });
+        const cleaned = cleanSettings(op.settings);
+        if ("error" in cleaned) fail(cleaned.error);
+        const value = (cleaned as { settings: SiteSettings }).settings as unknown as Prisma.InputJsonValue;
+        await prisma.siteSetting.upsert({ where: { key: "site" }, create: { key: "site", value }, update: { value } });
         await audit("settings.update", "site", "site");
         return { ok: true };
+      }
     }
   } catch (e) {
     if (e instanceof Fail) return { ok: false, error: e.message };
@@ -252,8 +271,13 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
 // ───────────── Gravar evento (com distâncias, preços, percursos…) ─────────────
 
 async function saveEvent(me: User, ev: AdminEvent, isNew: boolean): Promise<string | undefined> {
+  const invalid = checkEvent(ev);
+  if (invalid) fail(invalid);
   const isAdmin = me.role === "admin";
-  const existing = isNew ? null : await prisma.event.findUnique({ where: { id: ev.id }, select: { status: true, publishedAt: true } });
+  // O id vem do browser: um evento "novo" nunca pode reutilizar o id de um evento existente
+  // (senão o upsert actualizava o evento de outra pessoa — revisão de segurança 12.4, A1).
+  const existing = await prisma.event.findUnique({ where: { id: ev.id }, select: { status: true, publishedAt: true, featured: true } });
+  if (isNew && existing) fail("Este evento já existe. Recarregue a página e tente de novo.");
   if (!isNew && !existing) fail("Evento não encontrado.");
   if (!isNew && !(await canManageEvent(me, ev.id))) fail("Sem permissão para este evento.");
   if (ev.poster.startsWith("blob:") || ev.cover.startsWith("blob:")) fail("O cartaz ainda não foi carregado. Volte a escolher a imagem.");
@@ -266,6 +290,8 @@ async function saveEvent(me: User, ev: AdminEvent, isNew: boolean): Promise<stri
     status = "rascunho";
     message = "Guardado como rascunho. A publicação é feita pelo administrador.";
   }
+  // Depois de publicado, o estado (publicar, cancelar, terminar) só muda pelo admin (12.4, M4)
+  if (!isAdmin && existing && existing.status !== "rascunho") status = existing.status;
 
   const base = {
     slug: ev.slug,
@@ -295,13 +321,14 @@ async function saveEvent(me: User, ev: AdminEvent, isNew: boolean): Promise<stri
     kitItems: ev.kit.items,
     kitNotes: ev.kit.notes,
     regulationPdfUrl: ev.regulationPdf?.url && !ev.regulationPdf.url.startsWith("blob:") ? ev.regulationPdf.url : null,
-    featured: !!ev.featured,
+    featured: isAdmin ? !!ev.featured : (existing?.featured ?? false), // destaque na Home: só o admin
     publishedAt: status !== "rascunho" ? (existing?.publishedAt ?? new Date()) : null,
   };
 
   await prisma.$transaction(
     async (tx) => {
-      await tx.event.upsert({ where: { id: ev.id }, create: { id: ev.id, ...base }, update: base });
+      if (isNew) await tx.event.create({ data: { id: ev.id, ...base } });
+      else await tx.event.update({ where: { id: ev.id }, data: base });
       if (isNew && !isAdmin) await tx.eventStaff.create({ data: { eventId: ev.id, profileId: me.id, role: "organizador" } });
 
       // Listas simples: substituir

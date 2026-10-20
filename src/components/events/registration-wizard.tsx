@@ -383,7 +383,7 @@ export function RegistrationWizard({ event, today }: { event: SportsEvent; today
                 </Field>
               </div>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Telemóvel" htmlFor="phone" required error={errors.phone} hint="Enviamos a confirmação por SMS.">
+                <Field label="Telemóvel" htmlFor="phone" required error={errors.phone} hint="Para a organização o contactar sobre a inscrição ou o pagamento.">
                   <div className="flex">
                     <span className="flex h-12 items-center rounded-l-xl border border-r-0 border-ink-200 bg-ink-50 px-3 font-semibold text-ink-600">+244</span>
                     <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" className="rounded-l-none" value={form.phone.replace(/^\+244\s?/, "")} onChange={(e) => set("phone", e.target.value)} placeholder="923 000 000" aria-invalid={!!errors.phone} />

@@ -1,4 +1,4 @@
-// Seed da base de dados de DESENVOLVIMENTO.
+// Seed da base de dados de DESENVOLVIMENTO (com dados de demonstração). Para produção: prisma/seed-producao.ts.
 // Uso: npm run db:seed   (depois de npm run db:migrate e npm run db:supabase)
 //
 // - Cria o admin master no Supabase Auth (ADMIN_* do .env) e as contas de teste.
@@ -31,6 +31,18 @@ function env(name: string) {
 
 if (process.env.NODE_ENV === "production") {
   throw new Error("O seed é só para desenvolvimento. Não corra em produção.");
+}
+// Protecção extra (12.7): com o .env de produção (site fora de localhost) recusa criar dados de demonstração.
+// Para a produção use "npm run db:seed:producao". Para forçar numa BD de testes remota: SEED_DEMO_FORCE=1.
+const siteHost = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost").hostname;
+  } catch {
+    return "";
+  }
+})();
+if (!["localhost", "127.0.0.1"].includes(siteHost) && process.env.SEED_DEMO_FORCE !== "1") {
+  throw new Error(`NEXT_PUBLIC_SITE_URL aponta para ${siteHost}: isto parece produção. Use "npm run db:seed:producao" (sem dados de demonstração).`);
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: env("DIRECT_URL") }) });

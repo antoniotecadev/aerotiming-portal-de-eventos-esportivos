@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNext } from "@/lib/safe-next";
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -13,9 +14,7 @@ import { signIn } from "@/server/actions/auth";
 import type { User } from "@/lib/types";
 
 /** Só aceita caminhos internos (evita redireccionar para outros sites). */
-export function safeNext(next: string | null) {
-  return next && next.startsWith("/") && !next.startsWith("//") ? next : null;
-}
+export { safeNext };
 
 export function redirectFor(user: User, next: string | null) {
   return safeNext(next) ?? (user.role === "admin" || user.role === "organizador" ? "/admin" : "/perfil");

@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { RotateCcw, Save } from "lucide-react";
+import { Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { type SiteSettings, useAdmin } from "./admin-store";
-import { ConfirmModal, FormSection, PageTitle } from "./admin-ui";
+import { FormSection, PageTitle } from "./admin-ui";
 
 type Key = keyof SiteSettings;
 
 export function SettingsForm() {
-  const { data, saveSettings, reset } = useAdmin();
+  const { data, saveSettings } = useAdmin();
   const toast = useToast();
   const [form, setForm] = useState<SiteSettings>(data.settings);
   const [errors, setErrors] = useState<Partial<Record<Key, string>>>({});
-  const [confirmReset, setConfirmReset] = useState(false);
 
   useEffect(() => setForm(data.settings), [data.settings]);
 
@@ -26,6 +25,8 @@ export function SettingsForm() {
     const err: Partial<Record<Key, string>> = {};
     if (!form.siteName.trim()) err.siteName = "Indique o nome do site.";
     if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = "Indique um e-mail válido.";
+    if (form.privacyEmail && !/^\S+@\S+\.\S+$/.test(form.privacyEmail)) err.privacyEmail = "Indique um e-mail válido.";
+    if (form.nif && !/^[0-9A-Z]{9,14}$/i.test(form.nif.replace(/\s/g, ""))) err.nif = "O NIF tem entre 9 e 14 algarismos ou letras, sem espaços.";
     if (form.phone.replace(/\D/g, "").length < 9) err.phone = "Indique um número válido.";
     if (form.whatsapp && form.whatsapp.replace(/\D/g, "").length < 9) err.whatsapp = "Indique um número válido, com indicativo (+244).";
     (["facebook", "instagram", "youtube", "tiktok", "linkedin"] as Key[]).forEach((k) => {
@@ -57,6 +58,13 @@ export function SettingsForm() {
           <div className="grid gap-5 sm:grid-cols-2">
             {f("siteName", "Nome do site", { required: true })}
             {f("tagline", "Slogan")}
+          </div>
+        </FormSection>
+        <FormSection title="Empresa" description="Aparece nos termos e condições e na política de privacidade.">
+          <div className="grid gap-5 sm:grid-cols-2">
+            {f("legalName", "Nome legal da empresa", { placeholder: "Ex.: ConexãoSport, Lda.", hint: "Se ficar vazio, usa o nome do site." })}
+            {f("nif", "NIF", { placeholder: "Ex.: 5417000000" })}
+            {f("privacyEmail", "E-mail para dados pessoais", { type: "email", placeholder: "privacidade@…", hint: "Pedidos ao abrigo da Lei n.º 22/11. Se ficar vazio, usa o e-mail geral." })}
           </div>
         </FormSection>
         <FormSection title="Contactos" description="Aparecem no rodapé, na página de ajuda e nos e-mails aos atletas.">
@@ -96,17 +104,6 @@ export function SettingsForm() {
         </div>
       </div>
 
-      <ConfirmModal
-        open={confirmReset}
-        onClose={() => setConfirmReset(false)}
-        title="Repor dados de demonstração?"
-        description="Todas as alterações feitas no painel serão apagadas deste navegador."
-        confirmLabel="Repor dados"
-        onConfirm={() => {
-          reset();
-          toast({ title: "Dados de demonstração repostos" });
-        }}
-      />
     </form>
   );
 }

@@ -214,7 +214,7 @@ export function ImageUpload({
           <span className="flex flex-col items-center gap-2 p-4 text-center text-sm text-ink-500">
             <ImagePlus className="size-7 text-ink-400" />
             <span className="font-semibold text-ink-700">{label}</span>
-            <span>JPG, PNG ou SVG</span>
+            <span>JPG, PNG ou WEBP</span>
           </span>
         )}
       </label>

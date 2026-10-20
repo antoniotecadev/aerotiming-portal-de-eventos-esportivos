@@ -71,3 +71,15 @@ export async function listSitemapEvents() {
     orderBy: { date: "desc" },
   });
 }
+
+/** Números reais para a página "Sobre" (substituem os valores de demonstração — 12.7). */
+export async function getSiteStats() {
+  await connection();
+  const [eventsDone, athletes, provinces, finishers] = await Promise.all([
+    prisma.event.count({ where: { status: "terminado" } }),
+    prisma.registration.count({ where: { status: "confirmada" } }),
+    prisma.event.findMany({ where: { status: { notIn: ["rascunho", "cancelado"] } }, distinct: ["province"], select: { province: true } }),
+    prisma.result.count({ where: { status: "terminou", event: { resultsPublished: true } } }),
+  ]);
+  return { eventsDone, athletes, provinces: provinces.length, finishers };
+}

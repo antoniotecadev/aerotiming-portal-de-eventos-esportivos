@@ -12,7 +12,9 @@ import { RESULT_STATUS, formatDate } from "@/lib/format";
 import type { RaceResult, ResultStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { importResults, previewResultsImport, type ImportPreview } from "@/server/actions/results";
-import { downloadFile, normalize, toCsv, uid, useAdmin } from "./admin-store";
+import { useUrlFilters } from "@/lib/use-url-filters";
+import type { getDistanceResults } from "@/server/queries/admin-lists";
+import { downloadFile, normalize, toCsv, uid, useAdmin, useAdminRun } from "./admin-store";
 import { ConfirmModal, FilterSelect, PageTitle, SearchInput, TableWrap, Toggle, td, th } from "./admin-ui";
 
 const TIME_RE = /^\d{1,2}:\d{2}:\d{2}$/;
@@ -27,45 +29,54 @@ function normTime(v: string): string | null {
 
 /* ---------- Componente ---------- */
 
-export function ResultsManager() {
-  const { data, replaceWhere, update, remove, create, setResultsPublished } = useAdmin();
+export type DistanceResults = NonNullable<Awaited<ReturnType<typeof getDistanceResults>>>;
+
+/**
+ * Resultados de UMA distância de cada vez (12.10): o servidor carrega só o evento e a distância escolhidos
+ * (no URL: ?evento=…&distancia=…). Cada alteração grava logo e as classificações são recalculadas no servidor.
+ */
+export function ResultsManager({ eventSlug, distanceId, data: server }: { eventSlug: string; distanceId: string; data: DistanceResults | null }) {
+  const { data, setResultsPublished } = useAdmin();
+  const { set, pending: navigating } = useUrlFilters();
+  const { run } = useAdminRun();
   const toast = useToast();
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
 
   const sortedEvents = useMemo(() => [...data.events].sort((a, b) => b.date.localeCompare(a.date)), [data.events]);
-  const defaultEvent = useMemo(
-    () => sortedEvents.find((e) => data.results.some((r) => r.eventSlug === e.slug)) ?? sortedEvents.find((e) => e.status === "terminado") ?? sortedEvents[0],
-    [sortedEvents], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const [eventSlug, setEventSlug] = useState(defaultEvent?.slug ?? "");
   const event = data.events.find((e) => e.slug === eventSlug);
-  const [distanceId, setDistanceId] = useState(event?.distances[0]?.id ?? "");
   const distance = event?.distances.find((d) => d.id === distanceId);
   const [q, setQ] = useState("");
   const [preview, setPreview] = useState<(ImportPreview & { fileName: string; csv: string }) | null>(null);
   const [clear, setClear] = useState(false);
 
-  useEffect(() => {
-    if (event && !event.distances.some((d) => d.id === distanceId)) setDistanceId(event.distances[0]?.id ?? "");
-  }, [event, distanceId]);
-
-  const match = (r: RaceResult) => r.eventSlug === eventSlug && r.distanceId === distanceId;
-  const results = useMemo(
-    () =>
-      data.results
-        .filter((r) => r.eventSlug === eventSlug && r.distanceId === distanceId)
-        .sort((a, b) => (a.position ?? 1e9) - (b.position ?? 1e9) || a.bib.localeCompare(b.bib, undefined, { numeric: true })),
-    [data.results, eventSlug, distanceId],
+  // Cópia local para o ecrã reagir logo; o servidor devolve a versão gravada (com as posições) a seguir
+  const [results, setResults] = useState<RaceResult[]>(server?.results ?? []);
+  useEffect(() => setResults(server?.results ?? []), [server]);
+  const sortedResults = useMemo(
+    () => [...results].sort((a, b) => (a.position ?? 1e9) - (b.position ?? 1e9) || a.bib.localeCompare(b.bib, undefined, { numeric: true })),
+    [results],
   );
   const shown = useMemo(() => {
     const n = normalize(q.trim());
-    return n ? results.filter((r) => normalize(`${r.name} ${r.bib} ${r.club}`).includes(n)) : results;
-  }, [results, q]);
+    return n ? sortedResults.filter((r) => normalize(`${r.name} ${r.bib} ${r.club}`).includes(n)) : sortedResults;
+  }, [sortedResults, q]);
 
   const published = data.publishedResults.includes(eventSlug);
-  const eventResultCount = data.results.filter((r) => r.eventSlug === eventSlug).length;
+  const eventResultCount = server?.eventResultCount ?? 0;
+
+  const sync = (upsert: RaceResult[], removeIds: string[], success?: string) => run({ type: "results.sync", upsert, removeIds }, success);
+  const update = (id: string, patch: Partial<RaceResult>) => {
+    const current = results.find((x) => x.id === id);
+    if (!current) return;
+    setResults((list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+    sync([{ ...current, ...patch }], []);
+  };
+  const remove = (id: string) => {
+    setResults((list) => list.filter((x) => x.id !== id));
+    sync([], [id]);
+  };
 
   // 10.1: o ficheiro é validado no servidor (pré-visualização) e só é gravado depois de confirmar
   function onFile(f: File) {
@@ -93,8 +104,8 @@ export function ResultsManager() {
   function fromParticipants() {
     if (!distance) return;
     const existing = new Set(results.map((r) => r.bib));
-    const add = data.participants
-      .filter((p) => p.eventSlug === eventSlug && p.distanceId === distanceId && p.paymentStatus === "confirmado" && p.bib && !existing.has(p.bib))
+    const add = (server?.confirmed ?? [])
+      .filter((p) => !existing.has(p.bib))
       .map(
         (p): RaceResult => ({
           id: uid("rs"),
@@ -117,12 +128,12 @@ export function ResultsManager() {
         }),
       );
     if (!add.length) return toast({ tone: "info", title: "Nada a acrescentar", description: "Todos os inscritos pagos já estão na lista." });
-    replaceWhere("results", match, [...results, ...add]);
-    toast({ title: "Lista criada a partir das inscrições", description: `${add.length} atletas adicionados. Preencha os tempos.` });
+    setResults((list) => [...list, ...add]);
+    sync(add, [], `${add.length} atletas adicionados — preencha os tempos`);
   }
 
   function addRow() {
-    create("results", {
+    const row: RaceResult = {
       id: uid("rs"),
       eventSlug,
       distanceId,
@@ -140,7 +151,9 @@ export function ResultsManager() {
       pace: null,
       status: "terminou",
       splits: [],
-    });
+    };
+    setResults((list) => [...list, row]);
+    sync([row], []);
   }
 
   function template() {
@@ -168,14 +181,14 @@ export function ResultsManager() {
       />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
-        <FilterSelect value={eventSlug} onChange={setEventSlug} label="Escolher evento">
+        <FilterSelect value={eventSlug} onChange={(v) => set({ evento: v, distancia: data.events.find((e) => e.slug === v)?.distances[0]?.id ?? null })} label="Escolher evento">
           {sortedEvents.map((e) => (
             <option key={e.id} value={e.slug}>
               {e.title} — {formatDate(e.date)}
             </option>
           ))}
         </FilterSelect>
-        <FilterSelect value={distanceId} onChange={setDistanceId} label="Escolher distância">
+        <FilterSelect value={distanceId} onChange={(v) => set({ distancia: v })} label="Escolher distância">
           {event?.distances.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
@@ -243,6 +256,7 @@ export function ResultsManager() {
         />
       </div>
 
+      <div className={cn("transition-opacity", navigating && "opacity-60")} aria-busy={navigating}>
       {results.length === 0 ? (
         <EmptyState
           icon={<Timer />}
@@ -272,12 +286,13 @@ export function ResultsManager() {
             </thead>
             <tbody className="divide-y divide-ink-100">
               {shown.map((r) => (
-                <ResultRow key={r.id} r={r} onChange={(patch) => update("results", r.id, patch)} onRemove={() => remove("results", r.id)} />
+                <ResultRow key={r.id} r={r} onChange={(patch) => update(r.id, patch)} onRemove={() => remove(r.id)} />
               ))}
             </tbody>
           </table>
         </TableWrap>
       )}
+      </div>
 
       <Modal
         open={!!preview}
@@ -365,8 +380,9 @@ export function ResultsManager() {
         description={`Serão eliminados ${results.length} resultados de ${distance?.name ?? ""}.`}
         confirmLabel="Apagar resultados"
         onConfirm={() => {
-          replaceWhere("results", match, []);
-          toast({ title: "Resultados apagados" });
+          const ids = results.map((x) => x.id);
+          setResults([]);
+          sync([], ids, "Resultados apagados");
         }}
       />
     </>

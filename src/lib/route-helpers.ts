@@ -79,7 +79,7 @@ export function regulation(opts: {
       title: "1. Organização",
       items: [
         `A prova "${opts.title}" é organizada por ${opts.organizer}, com cronometragem electrónica da ConexãoSport.`,
-        "A organização reserva-se o direito de alterar o percurso ou horários por motivos de segurança, informando os atletas por SMS e e-mail.",
+        "A organização reserva-se o direito de alterar o percurso ou horários por motivos de segurança, informando os atletas na página do evento.",
       ],
     },
     {

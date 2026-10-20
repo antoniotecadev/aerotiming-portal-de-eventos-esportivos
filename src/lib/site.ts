@@ -3,6 +3,11 @@
 export interface SiteSettings {
   siteName: string;
   tagline: string;
+  /** Empresa responsável (termos e privacidade). Vazio = usa o nome do site. */
+  legalName: string;
+  nif: string;
+  /** Contacto para pedidos sobre dados pessoais. Vazio = usa o e-mail geral. */
+  privacyEmail: string;
   email: string;
   phone: string;
   whatsapp: string;
@@ -21,12 +26,16 @@ export interface SiteSettings {
 export const DEFAULT_SETTINGS: SiteSettings = {
   siteName: "ConexãoSport",
   tagline: "Eventos desportivos em Angola",
-  email: "geral@conexaosport.ao",
-  phone: "+244 923 000 000",
-  whatsapp: "+244 923 000 000",
-  address: "Talatona, Luanda — Angola",
-  facebook: "https://facebook.com/conexaosport",
-  instagram: "https://instagram.com/conexaosport",
+  legalName: "",
+  nif: "",
+  privacyEmail: "",
+  // Contactos vazios por omissão: o site esconde o que não estiver preenchido em Definições (12.7)
+  email: "",
+  phone: "",
+  whatsapp: "",
+  address: "",
+  facebook: "",
+  instagram: "",
   youtube: "",
   tiktok: "",
   linkedin: "",
@@ -35,6 +44,14 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   iban: "",
   accountHolder: "",
 };
+
+/** "ConexãoSport, Lda. (NIF 5417000000)" — o nome legal, ou o do site, e o NIF se estiver preenchido. */
+export const legalEntity = (s: SiteSettings) => `${s.legalName || s.siteName}${s.nif ? ` (NIF ${s.nif})` : ""}`;
+
+export const privacyEmail = (s: SiteSettings) => s.privacyEmail || s.email;
+
+/** "escrevendo para privacidade@…" ou, sem e-mail configurado, "pelo formulário de contacto". */
+export const privacyContact = (s: SiteSettings) => (privacyEmail(s) ? `escrevendo para ${privacyEmail(s)}` : "pelo formulário da página Contacto");
 
 /** Só os dígitos, com o indicativo de Angola (244) quando o número tem 9 dígitos. */
 export function phoneDigits(phone: string) {

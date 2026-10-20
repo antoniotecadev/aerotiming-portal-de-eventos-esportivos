@@ -8,44 +8,20 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PAYMENT_STATUS, formatDate, formatDateTime, formatKz, monthShort } from "@/lib/format";
 import { today } from "@/lib/today";
-import { participantPrice, useAdmin } from "./admin-store";
+import type { getDashboardStats } from "@/server/queries/admin-lists";
+import { useAdmin } from "./admin-store";
 import { PageTitle, ProgressBar, StatCard, TableWrap, td, th } from "./admin-ui";
 
-export function Dashboard() {
+export type DashboardStats = Awaited<ReturnType<typeof getDashboardStats>>;
+
+/** Painel: os números vêm do servidor (consultas agregadas — 12.10); os próximos eventos, da loja do painel. */
+export function Dashboard({ stats: server }: { stats: DashboardStats }) {
   const { data } = useAdmin();
-  const { events, participants } = data;
-
+  const { events } = data;
   const stats = useMemo(() => {
-    const active = participants.filter((p) => p.paymentStatus !== "cancelado");
-    const confirmed = participants.filter((p) => p.paymentStatus === "confirmado");
-    const pending = participants.filter((p) => p.paymentStatus === "pendente");
-    const revenue = confirmed.reduce((acc, p) => acc + participantPrice(events, p), 0);
-    const pendingValue = pending.reduce((acc, p) => acc + participantPrice(events, p), 0);
     const upcoming = events.filter((e) => e.date >= today() && e.status !== "cancelado" && !e.draft).sort((a, b) => a.date.localeCompare(b.date));
-
-    const byEvent = events
-      .map((e) => ({ id: e.id, label: e.title, value: participants.filter((p) => p.eventSlug === e.slug && p.paymentStatus !== "cancelado").length }))
-      .filter((x) => x.value > 0)
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 8);
-
-    // Receita confirmada dos últimos 8 meses (até ao mês actual)
-    const [ty, tm] = today().split("-").map(Number);
-    const months = Array.from({ length: 8 }, (_, i) => {
-      const d = new Date(ty, tm - 1 - (7 - i), 1);
-      return { key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`, label: monthShort(d.getMonth()), year: d.getFullYear(), value: 0 };
-    });
-    confirmed.forEach((p) => {
-      const m = months.find((x) => p.registeredAt.startsWith(x.key));
-      if (m) m.value += participantPrice(events, p);
-    });
-
-    const latest = [...participants].sort((a, b) => b.registeredAt.localeCompare(a.registeredAt)).slice(0, 8);
-    return { total: active.length, revenue, pending: pending.length, pendingValue, upcoming, byEvent, months, latest };
-  }, [events, participants]);
-
-  const eventTitle = (slug: string) => events.find((e) => e.slug === slug)?.title ?? slug;
-  const distName = (slug: string, id: string) => events.find((e) => e.slug === slug)?.distances.find((d) => d.id === id)?.name ?? id;
+    return { ...server, upcoming };
+  }, [events, server]);
 
   return (
     <>
@@ -170,11 +146,11 @@ export function Dashboard() {
                       <p className="text-xs text-ink-500">Dorsal #{p.bib}</p>
                     </td>
                     <td className={td}>
-                      <p className="max-w-56 truncate">{eventTitle(p.eventSlug)}</p>
-                      <p className="text-xs text-ink-500">{distName(p.eventSlug, p.distanceId)}</p>
+                      <p className="max-w-56 truncate">{p.eventTitle}</p>
+                      <p className="text-xs text-ink-500">{p.distanceName}</p>
                     </td>
                     <td className={`${td} whitespace-nowrap`}>{formatDateTime(p.registeredAt)}</td>
-                    <td className={`${td} tabular whitespace-nowrap`}>{formatKz(participantPrice(events, p))}</td>
+                    <td className={`${td} tabular whitespace-nowrap`}>{formatKz(p.price)}</td>
                     <td className={td}>
                       <Badge tone={PAYMENT_STATUS[p.paymentStatus].tone} dot>
                         {PAYMENT_STATUS[p.paymentStatus].label}

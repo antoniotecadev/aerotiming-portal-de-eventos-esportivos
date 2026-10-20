@@ -26,24 +26,25 @@ const toE164 = (v: string) => {
 const aoPhone = (msg: string) => z.string().refine((v) => /^9\d{8}$/.test(digits(v).replace(/^244(?=\d{9}$)/, "")), { message: msg });
 
 const schema = z.object({
-  eventSlug: z.string().min(1),
-  distanceCode: z.string().min(1, { message: "Escolha uma distância para continuar." }),
+  eventSlug: z.string().min(1).max(120),
+  distanceCode: z.string().min(1, { message: "Escolha uma distância para continuar." }).max(40),
   method: z.enum(["multicaixa-express", "transferencia", "deposito", "kwik"], { message: "Escolha como vai pagar." }),
   name: z
     .string()
     .trim()
+    .max(120, { message: "O nome é demasiado longo." })
     .transform((v) => v.replace(/\s+/g, " "))
     .refine((v) => v.split(" ").length >= 2, { message: "Escreva o nome e o apelido (como no BI)." }),
   gender: z.enum(["M", "F"], { message: "Escolha o sexo." }),
   birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Indique a data de nascimento." }),
   documentType: z.enum(["BI", "Passaporte"]),
-  documentNumber: z.string().trim().toUpperCase().min(6, { message: "Escreva o número do documento." }),
+  documentNumber: z.string().trim().toUpperCase().min(6, { message: "Escreva o número do documento." }).max(30, { message: "O número do documento é demasiado longo." }),
   phone: aoPhone("Escreva um número de telemóvel válido (9 dígitos)."),
-  email: z.union([z.literal(""), z.email({ message: "Este e-mail não parece correcto." })]).optional(),
-  province: z.string().min(1, { message: "Escolha a província." }),
+  email: z.union([z.literal(""), z.email({ message: "Este e-mail não parece correcto." }).max(200)]).optional(),
+  province: z.string().min(1, { message: "Escolha a província." }).max(60),
   club: z.string().trim().max(80).optional().default(""),
   tshirt: z.enum(["XS", "S", "M", "L", "XL", "XXL"], { message: "Escolha o tamanho da t-shirt." }),
-  emergencyName: z.string().trim().min(2, { message: "Quem devemos contactar em caso de emergência?" }),
+  emergencyName: z.string().trim().min(2, { message: "Quem devemos contactar em caso de emergência?" }).max(120),
   emergencyPhone: aoPhone("Escreva o telemóvel do contacto de emergência."),
   emergencyRelation: z.string().trim().max(40).optional().default(""),
   bloodType: z.string().max(10).optional().default(""),

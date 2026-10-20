@@ -48,8 +48,8 @@ export async function SiteFooter() {
             A forma mais simples de encontrar, inscrever-se e acompanhar eventos desportivos em Angola. Cronometragem electrónica e resultados na hora.
           </p>
           <ul className="space-y-2.5 text-[15px]">
-            <li className="flex items-center gap-3"><Phone className="size-4 text-brand-400" /> <a href={telHref(settings.phone)} className="hover:text-white">{formatPhone(settings.phone)}</a></li>
-            <li className="flex items-center gap-3"><Mail className="size-4 text-brand-400" /> <a href={`mailto:${settings.email}`} className="hover:text-white">{settings.email}</a></li>
+            {settings.phone && <li className="flex items-center gap-3"><Phone className="size-4 text-brand-400" /> <a href={telHref(settings.phone)} className="hover:text-white">{formatPhone(settings.phone)}</a></li>}
+            {settings.email && <li className="flex items-center gap-3"><Mail className="size-4 text-brand-400" /> <a href={`mailto:${settings.email}`} className="hover:text-white">{settings.email}</a></li>}
             {settings.address && <li className="flex items-center gap-3"><MapPin className="size-4 text-brand-400" /> {settings.address}</li>}
           </ul>
           <div className="flex gap-2 pt-1">

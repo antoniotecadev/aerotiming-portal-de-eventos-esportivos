@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, KeyRound, LogOut, Mail, MessageSquareText, Save, Trash2, TriangleAlert } from "lucide-react";
+import { Bell, Download, KeyRound, LogOut, Mail, MessageSquareText, Save, Trash2, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { FormError, PasswordInput, PasswordStrength } from "@/components/auth/password-input";
 import { WhatsAppIcon } from "@/components/layout/social-icons";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
@@ -106,7 +106,7 @@ export function SecuritySettings() {
         <Card>
           <CardHeader
             title={<span className="inline-flex items-center gap-2"><Bell className="size-5 text-brand-600" /> Notificações</span>}
-            description="Avisos de pagamento, levantamento do kit e resultados."
+            description="Por agora não enviamos avisos: acompanhe o pagamento, o dorsal e os resultados em «As minhas inscrições». As suas preferências ficam guardadas para quando começarmos."
           />
           <div className="space-y-1 p-3 sm:p-4">
             <Toggle icon={<MessageSquareText />} title="SMS" hint={user.phone ? `Para ${user.phone}` : "Adicione o telemóvel em “Os meus dados”"} checked={prefs.sms} onChange={(v) => setPrefs((p) => ({ ...p, sms: v }))} />
@@ -116,9 +116,6 @@ export function SecuritySettings() {
             <Toggle icon={<Bell />} title="Novas provas e promoções" hint="No máximo 2 mensagens por mês" checked={prefs.news} onChange={(v) => setPrefs((p) => ({ ...p, news: v }))} />
           </div>
           <div className="border-t border-ink-100 px-5 py-4 sm:px-6">
-            {!prefs.sms && !prefs.email && !prefs.whatsapp && (
-              <p className="mb-3 text-sm text-amber-800">Atenção: sem nenhum canal activo não vai receber avisos importantes sobre as suas provas.</p>
-            )}
             <Button
               variant="dark"
               className="w-full sm:w-auto"
@@ -158,13 +155,25 @@ export function SecuritySettings() {
         </div>
       </Card>
 
+      <Card>
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div>
+            <p className="font-bold text-ink-900">Os meus dados</p>
+            <p className="text-[15px] text-ink-600">Descarregue tudo o que guardamos sobre si: conta, inscrições, pagamentos e resultados (ficheiro JSON).</p>
+          </div>
+          <a href="/api/perfil/exportar" download className={buttonClasses("outline")}>
+            <Download /> Descarregar os meus dados
+          </a>
+        </div>
+      </Card>
+
       <Card className="border-red-200">
         <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex gap-3">
             <TriangleAlert className="mt-0.5 size-6 shrink-0 text-red-600" />
             <div>
               <p className="font-bold text-red-700">Apagar conta</p>
-              <p className="text-[15px] text-ink-600">Apaga os seus dados pessoais. Os resultados de provas passadas continuam públicos, mas sem ligação à conta. Não é possível desfazer.</p>
+              <p className="text-[15px] text-ink-600">Cancela as inscrições em provas futuras e apaga os seus dados pessoais (documento, contactos, saúde). O nome e os resultados de provas passadas continuam na classificação, sem ligação à conta. Não é possível desfazer.</p>
             </div>
           </div>
           <Button variant="danger" onClick={() => setDeleteOpen(true)}>

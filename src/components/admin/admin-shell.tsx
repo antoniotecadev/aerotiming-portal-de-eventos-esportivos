@@ -13,7 +13,6 @@ import {
   LogOut,
   Mail,
   Menu,
-  RotateCcw,
   Search,
   Settings,
   ShieldAlert,
@@ -29,10 +28,9 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { LogoMark } from "@/components/layout/logo";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { adminSearch } from "@/server/actions/admin-search";
 import { AdminStoreProvider, normalize, useAdmin , type AdminData } from "./admin-store";
-import { ConfirmModal } from "./admin-ui";
 
 const NAV = [
   { href: "/admin", label: "Painel", icon: LayoutDashboard },
@@ -98,10 +96,6 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const { reset } = useAdmin();
-  const toast = useToast();
-  const [confirm, setConfirm] = useState(false);
-
   return (
     <nav className="flex h-full flex-col bg-ink-900 text-ink-300" aria-label="Gestão">
       <div className="flex h-16 items-center justify-between gap-2 border-b border-white/10 px-5">
@@ -143,17 +137,6 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <ExternalLink className="size-4" /> Ver site
         </Link>
       </div>
-      <ConfirmModal
-        open={confirm}
-        onClose={() => setConfirm(false)}
-        title="Repor dados de demonstração?"
-        description="Todas as alterações feitas no painel (eventos, inscrições, resultados, banners…) serão apagadas deste navegador."
-        confirmLabel="Repor dados"
-        onConfirm={() => {
-          reset();
-          toast({ title: "Dados de demonstração repostos" });
-        }}
-      />
     </nav>
   );
 }
@@ -232,18 +215,35 @@ function GlobalSearch() {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  // Eventos: já estão no painel. Inscrições e utilizadores: pesquisa no servidor quando se pára de escrever (12.10)
+  const [remote, setRemote] = useState<{ term: string; participants: { id: string; name: string; bib: string; eventSlug: string; eventTitle: string }[]; users: { id: string; name: string; email: string }[] } | null>(null);
+  useEffect(() => {
+    const term = q.trim();
+    if (term.length < 2) return setRemote(null);
+    let alive = true;
+    const t = setTimeout(async () => {
+      const res = await adminSearch(term).catch(() => ({ participants: [], users: [] }));
+      if (alive) setRemote({ term, ...res });
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [q]);
+
   const results = useMemo(() => {
     const n = normalize(q.trim());
     if (n.length < 2) return null;
+    const fresh = remote?.term === q.trim();
     return {
       events: data.events.filter((e) => normalize(`${e.title} ${e.city}`).includes(n)).slice(0, 4),
-      participants: data.participants.filter((p) => normalize(`${p.name} ${p.bib}`).includes(n)).slice(0, 5),
-      users: data.users.filter((u) => normalize(`${u.name} ${u.email}`).includes(n)).slice(0, 4),
+      participants: fresh ? remote!.participants : [],
+      users: fresh ? remote!.users : [],
+      loading: !fresh,
     };
-  }, [q, data]);
+  }, [q, data.events, remote]);
 
-  const empty = results && !results.events.length && !results.participants.length && !results.users.length;
-  const eventTitle = (slug: string) => data.events.find((e) => e.slug === slug)?.title ?? slug;
+  const empty = results && !results.loading && !results.events.length && !results.participants.length && !results.users.length;
 
   return (
     <div ref={ref} className="relative w-full max-w-md min-w-0">
@@ -263,6 +263,7 @@ function GlobalSearch() {
       {open && results && (
         <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-ink-200 bg-white py-2 shadow-lift">
           {empty && <p className="px-4 py-3 text-sm text-ink-500">Sem resultados para “{q}”.</p>}
+          {results.loading && <p className="px-4 py-2 text-xs text-ink-400">A procurar inscrições…</p>}
           {results.events.length > 0 && (
             <SearchGroup label="Eventos">
               {results.events.map((e) => (
@@ -273,7 +274,7 @@ function GlobalSearch() {
           {results.participants.length > 0 && (
             <SearchGroup label="Inscrições">
               {results.participants.map((p) => (
-                <SearchLink key={p.id} href={`/admin/inscricoes?q=${encodeURIComponent(p.bib)}&evento=${p.eventSlug}`} title={`${p.name} · #${p.bib}`} sub={eventTitle(p.eventSlug)} />
+                <SearchLink key={p.id} href={`/admin/inscricoes?q=${encodeURIComponent(p.bib)}&evento=${p.eventSlug}`} title={`${p.name} · #${p.bib}`} sub={p.eventTitle} />
               ))}
             </SearchGroup>
           )}

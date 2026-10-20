@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { csvCell } from "@/lib/csv";
 import { Prisma } from "@/generated/prisma/client";
 import type { PaymentAccounts } from "@/lib/types";
 import { getCurrentUser, hasRole } from "../auth";
@@ -117,7 +118,7 @@ export async function exportPaymentsCsv(input: { eventId: string }): Promise<Res
     include: { registration: { select: { code: true, athleteName: true, phone: true, bib: true, distance: { select: { name: true } } } } },
     orderBy: { createdAt: "asc" },
   });
-  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const esc = csvCell; // aspas + protecção contra fórmulas (12.4, B3)
   const header = ["Código", "Atleta", "Telemóvel", "Distância", "Dorsal", "Método", "Valor (Kz)", "Estado", "Nº operação", "Confirmado em", "Nota"];
   const lines = rows.map((p) =>
     [p.registration.code, p.registration.athleteName, p.registration.phone, p.registration.distance.name, p.registration.bib, p.method, p.amount, p.status, p.transactionRef, p.confirmedAt?.toISOString().slice(0, 16).replace("T", " "), p.reviewNote]

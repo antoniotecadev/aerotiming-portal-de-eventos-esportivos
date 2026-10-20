@@ -1,69 +1,75 @@
 # ConexãoSport — Portal de eventos desportivos (Angola)
 
-Frontend em **Next.js 16 (App Router) + React 19 + Tailwind CSS 4 + TypeScript**.
-Todos os dados são **mock** (não há backend ainda). O protótipo antigo (Vite) está guardado em `_prototipo-vite/` só para referência.
+Inscrições, pagamentos (confirmação manual), check-in de kits, resultados e certificados de corridas, caminhadas, ciclismo, BTT, trail e triatlo.
 
-## Como correr
+**Next.js 16 (App Router) · React 19 · Tailwind CSS 4 · TypeScript · Prisma 7 · Supabase (Postgres, Auth, Storage)**
+
+> 📋 O plano de migração, as decisões e o progresso estão em **[GUIA_MIGRACAO.md](GUIA_MIGRACAO.md)**.
+
+## Começar (desenvolvimento)
+
+Precisa de **Node 22** (`.nvmrc`) e de um projecto Supabase de desenvolvimento.
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run build      # build de produção
-npm run typecheck  # verificação de tipos
+npm install                 # também corre "prisma generate"
+cp .env.example .env        # preencher com as chaves do Supabase de desenvolvimento
+npm run db:check            # testa as ligações à base de dados
+npm run db:deploy           # aplica as migrações
+npm run db:supabase         # triggers do Auth + RLS (prisma/sql/supabase-setup.sql)
+npm run db:seed             # admin, contas de teste e dados de demonstração
+npm run dev                 # http://localhost:3000
 ```
 
-### Contas de demonstração
-| Perfil | E-mail | Palavra-passe |
-|---|---|---|
-| Atleta | `carlos@exemplo.ao` | `123456` |
-| Administrador | `admin@conexaosport.ao` | `admin123` |
+Contas criadas pelo seed de desenvolvimento: o admin do `.env` (`ADMIN_EMAIL` / `ADMIN_PASSWORD`) e duas contas de teste, `atleta@exemplo.ao` e `organizador@exemplo.ao`, com a palavra-passe `SEED_TEST_PASSWORD`.
 
-A sessão é simulada e fica no `localStorage` do browser. A data de "hoje" está fixa em **14/10/2026** (`TODAY` em `src/lib/data/index.ts`) para os dados mock fazerem sentido.
+> ⚠️ Depois de `prisma generate` ou de aplicar migrações, reinicie o `npm run dev` (o servidor guarda o cliente Prisma antigo).
 
-## Páginas
+## Produção
 
-| Rota | O que tem |
+```bash
+npm run db:deploy           # migrações (nunca "migrate dev" em produção)
+npm run db:supabase         # triggers do Auth + RLS
+npm run db:seed:producao    # só o admin, as modalidades e o nome do site — sem demonstração
+```
+
+Os dados reais (empresa e NIF, contactos, contas de recebimento, patrocinadores, banners, eventos) preenchem-se no painel `/admin`, que mostra o que falta em **"Antes de abrir ao público"**. A tarefa agendada (`vercel.json`) chama `/api/cron/expirar-inscricoes` com `Authorization: Bearer <CRON_SECRET>`.
+
+`NEXT_PUBLIC_SITE_URL` tem de ter o domínio final: é usado no sitemap, no robots, nos endereços canónicos, nas imagens de partilha e no certificado.
+
+## Comandos
+
+| Comando | O que faz |
 |---|---|
-| `/` | Pesquisa (texto + província + modalidade), carrossel de destaques/publicidade/edições anteriores, eventos adicionados recentemente, modalidades, próximas provas, "como funciona", últimos resultados, patrocinadores |
-| `/eventos` | Lista com filtros (modalidade, província, mês, estado), ordenação, vista grelha/lista; filtros guardados no URL |
-| `/eventos/[slug]` | Cartaz (abre em ecrã inteiro com zoom e download), dados principais, distâncias e preços por fase, percurso (mapa + altimetria + pontos de apoio), kit e levantamento, programa, regulamento, inscritos, como chegar, patrocinadores, partilha WhatsApp/Facebook |
-| `/eventos/[slug]/inscricao` | Inscrição em 4 passos (distância → dados → saúde → pagamento) com Multicaixa Express, referência Multicaixa ou transferência; confirmação, adicionar ao calendário (.ics) |
-| `/eventos/[slug]/inscritos` | Lista pública de inscritos com estado do pagamento |
-| `/calendario` | Calendário mensal + vista em lista, filtros |
-| `/resultados`, `/resultados/[slug]` | Provas com resultados, pódio, classificação completa (sexo, escalão, tempos chip/oficial, ritmo, parciais), certificado imprimível, exportar CSV, inscritos |
-| `/entrar`, `/criar-conta`, `/recuperar-senha` | Autenticação (simulada) |
-| `/perfil/*` | Resumo, inscrições com bilhete QR e pagamento pendente, resultados e recordes pessoais, dados pessoais, segurança |
-| `/admin/*` | Painel, eventos (criar/editar/duplicar/eliminar), inscrições (confirmar pagamento, kit), resultados (importar CSV, recalcular, publicar), utilizadores, banners do carrossel, patrocinadores, categorias, definições |
-| `/sobre`, `/ajuda`, `/contacto`, `/termos`, `/privacidade` | Institucionais e FAQ |
+| `npm run dev` / `build` / `start` | Desenvolvimento, build e servidor de produção |
+| `npm run typecheck` | Verificação de tipos |
+| `npm run db:check` | Testa `DATABASE_URL` e `DIRECT_URL` |
+| `npm run db:deploy` | Aplica as migrações de `prisma/migrations` |
+| `npm run db:seed` | Dados de demonstração (só desenvolvimento; recusa correr fora de localhost) |
+| `npm run db:seed:producao` | Arranque mínimo da produção |
+| `npm run db:studio` | Prisma Studio |
+| `npm run test:registrations` | Testes de vagas, códigos e dorsais contra a BD de desenvolvimento |
 
 ## Estrutura
 
 ```
 src/
   app/
-    (site)/      páginas públicas (com cabeçalho, rodapé, barra inferior no telemóvel, botão WhatsApp)
-    (auth)/      entrar / criar conta / recuperar palavra-passe
-    admin/       painel de gestão (layout próprio)
-  components/
-    ui/          design system (Button, Badge, Field, Card, Modal, Tabs, Toast…)
-    layout/      cabeçalho, rodapé, logótipo, navegação
-    events/ home/ calendar/ results/ profile/ auth/ info/ admin/
-  lib/
-    types.ts     modelos de dados (contrato para o futuro backend)
-    data/        dados mock + funções de consulta
-    format.ts    datas, Kz, estados
-public/images/   fotos, cartazes, logótipos de patrocinadores (fictícios)
+    (site)/(geral)/   páginas públicas e perfil (com o ecrã de carregamento)
+    (site)/eventos/[slug], (site)/resultados/[slug]
+                      verificam o evento antes do streaming (404 verdadeiro)
+    (auth)/           entrar, criar conta, recuperar palavra-passe
+    admin/            painel de gestão (admin e organizadores)
+    checkin/          levantamento de kits (telemóvel)
+    api/              certificados PDF, CSV de resultados, tarefa agendada
+  server/
+    queries/          leituras da BD (filtradas por permissão)
+    actions/          Server Actions (escritas, sempre com verificação de permissões)
+    results.ts        importação de CSV e classificações
+    rate-limit.ts     limite de tentativas
+  components/         interface (ui/, layout/, events/, results/, admin/…)
+  lib/                tipos, formatação, utilitários partilhados
+prisma/
+  schema.prisma, migrations/, sql/supabase-setup.sql
+  seed.ts + seed-data/   demonstração (desenvolvimento)
+  seed-producao.ts       arranque da produção
 ```
-
-## Ligar ao backend (próximo passo)
-
-> 📋 O plano passo a passo, com a lista de tarefas e o progresso, está em **[GUIA_MIGRACAO.md](GUIA_MIGRACAO.md)**.
-
-- As páginas públicas leem os dados através das funções de `src/lib/data/index.ts` (`getEvent`, `upcomingEvents`, `resultsOf`…). Substitua-as por chamadas à API mantendo os tipos de `src/lib/types.ts`.
-- A autenticação está em `src/components/auth/auth-provider.tsx` (trocar por sessão real).
-- O admin usa um store local (`src/components/admin/admin-store.tsx`, persistido em `localStorage`). As alterações feitas no admin **não** aparecem no site público até existir backend.
-- Uploads (cartaz, logótipos, GPX, PDF) são só pré-visualização local.
-
-## Notas
-- Logótipos de patrocinadores, contactos, NIF e números da empresa são **fictícios** — substituir pelos reais.
-- A loja ficou de fora, como combinado.

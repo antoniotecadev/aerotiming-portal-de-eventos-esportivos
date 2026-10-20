@@ -1,0 +1,36 @@
+# Verificação automática (12.2): tipos e build em cada push e pull request.
+# Não usa nenhuma base de dados nem segredos — as variáveis abaixo são valores fictícios só para o build
+# (o Prisma e o Next exigem que existam). O deploy é feito pelo Vercel (npm run vercel-build).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?pgbouncer=true
+      DIRECT_URL: postgresql://ci:ci@localhost:5432/ci
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci
+      SUPABASE_SECRET_KEY: ci
+      NEXT_PUBLIC_SITE_URL: https://ci.example.com
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx prisma validate
+      - run: npm run build

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { purgeHealthData } from "@/server/privacy";
 import { purgeRateLimits } from "@/server/rate-limit";
 import { expireStaleRegistrations } from "@/server/registrations";
 
@@ -15,5 +16,7 @@ export async function GET(request: NextRequest) {
   const expired = await expireStaleRegistrations();
   // Aproveita para limpar os contadores antigos do limite de tentativas (7.9)
   const { count: rateLimitsPurged } = await purgeRateLimits();
-  return NextResponse.json({ ok: true, expired, rateLimitsPurged });
+  // Lei n.º 22/11 (12.5): dados de saúde e contacto de emergência apagados 30 dias depois da prova
+  const healthPurged = await purgeHealthData();
+  return NextResponse.json({ ok: true, expired, rateLimitsPurged, healthPurged });
 }

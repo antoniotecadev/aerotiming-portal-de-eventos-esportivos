@@ -1,11 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Banner, Category, Participant, RaceResult, SportsEvent, Sponsor, User } from "@/lib/types";
+import type { Banner, Category, Sponsor } from "@/lib/types";
 import { useToast } from "@/components/ui/toast";
-import { adminMutate, type AdminOp } from "@/server/actions/admin";
-import type { AdminData, AdminEvent, AdminParticipant, CollectionName, Collections, SiteSettings } from "./admin-types";
+import { adminMutate, type AdminOp, type AdminOpResult } from "@/server/actions/admin";
+import type { AdminData, AdminEvent, CollectionName, Collections, SiteSettings } from "./admin-types";
 
 export type { AdminData, AdminEvent, AdminParticipant, CollectionName, SiteSettings } from "./admin-types";
 export { DEFAULT_SETTINGS } from "./admin-types";
@@ -25,14 +25,10 @@ interface AdminStore {
   create: <K extends CollectionName>(name: K, item: Collections[K]) => void;
   update: <K extends CollectionName>(name: K, id: string, patch: Partial<Collections[K]>) => void;
   remove: <K extends CollectionName>(name: K, id: string) => void;
-  /** Substitui todos os itens de uma colecção que satisfazem `match` (ex.: resultados de uma distância). */
-  replaceWhere: <K extends CollectionName>(name: K, match: (item: Collections[K]) => boolean, items: Collections[K][]) => void;
-  confirmPayment: (participantId: string | string[]) => void;
-  toggleActive: (name: "users" | "banners" | "sponsors", id: string) => void;
+  toggleActive: (name: "banners" | "sponsors", id: string) => void;
   moveBanner: (id: string, dir: -1 | 1) => void;
   setResultsPublished: (eventSlug: string, published: boolean) => void;
   saveSettings: (s: SiteSettings) => void;
-  reset: () => void;
 }
 
 const Ctx = createContext<AdminStore | null>(null);
@@ -48,10 +44,6 @@ function opFor<K extends CollectionName>(name: K, item: Collections[K], isNew: b
   switch (name) {
     case "events":
       return { type: "event.save", event: item as AdminEvent, isNew };
-    case "results":
-      return { type: "results.sync", upsert: [item as RaceResult], removeIds: [] };
-    case "users":
-      return { type: "user.save", user: item as User, isNew };
     case "banners":
       return { type: "banner.save", banner: item as Banner };
     case "sponsors":
@@ -98,7 +90,6 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
       const current = find(name, id);
       setData((d) => ({ ...d, [name]: (d[name] as object[]).map((x) => (keyOf(name, x) === id ? { ...x, ...patch } : x)) }));
       if (!current) return;
-      if (name === "participants") return void send({ type: "participant.update", id, patch: patch as Partial<AdminParticipant> });
       if (name === "categories") return void send({ type: "category.update", slug: id, patch: patch as Partial<Category> });
       void send(opFor(name, { ...current, ...patch } as Collections[typeof name], false));
     },
@@ -111,33 +102,10 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
       setData((d) => ({ ...d, [name]: (d[name] as object[]).filter((x) => keyOf(name, x) !== id) }));
       const op: AdminOp | null =
         name === "events" ? { type: "event.remove", id }
-        : name === "results" ? { type: "results.sync", upsert: [], removeIds: [id] }
-        : name === "users" ? { type: "user.remove", id }
         : name === "banners" ? { type: "banner.remove", id }
         : name === "sponsors" ? { type: "sponsor.remove", id }
         : null;
       void send(op);
-    },
-    [send],
-  );
-
-  const replaceWhere = useCallback<AdminStore["replaceWhere"]>(
-    (name, match, items) => {
-      const list = latest.current[name] as unknown as Collections[typeof name][];
-      const keep = new Set(items.map((x) => keyOf(name, x as object)));
-      const removeIds = list.filter(match).map((x) => keyOf(name, x as object)).filter((id) => !keep.has(id));
-      setData((d) => ({ ...d, [name]: [...(d[name] as unknown as Collections[typeof name][]).filter((x) => !match(x)), ...items] }));
-      if (name === "results") void send({ type: "results.sync", upsert: items as RaceResult[], removeIds });
-    },
-    [send],
-  );
-
-  const confirmPayment = useCallback<AdminStore["confirmPayment"]>(
-    (ids) => {
-      const list = Array.isArray(ids) ? ids : [ids];
-      const set = new Set(list);
-      setData((d) => ({ ...d, participants: d.participants.map((p) => (set.has(p.id) ? { ...p, paymentStatus: "confirmado" } : p)) }));
-      void send({ type: "payment.confirm", participantIds: list });
     },
     [send],
   );
@@ -183,16 +151,35 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
     [send],
   );
 
-  const reset = useCallback(() => {
-    toast({ title: "Indisponível", description: "O painel usa dados reais. Para repor os dados de demonstração use \"npm run db:seed\" numa base de dados de desenvolvimento.", tone: "info" });
-  }, [toast]);
-
   const value = useMemo<AdminStore>(
-    () => ({ data, hydrated: true, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset }),
-    [data, create, update, remove, replaceWhere, confirmPayment, toggleActive, moveBanner, setResultsPublished, saveSettings, reset],
+    () => ({ data, hydrated: true, create, update, remove, toggleActive, moveBanner, setResultsPublished, saveSettings }),
+    [data, create, update, remove, toggleActive, moveBanner, setResultsPublished, saveSettings],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+/**
+ * Para as páginas com listas paginadas no servidor (inscrições, resultados, utilizadores — 12.10):
+ * envia a operação, mostra o resultado e relê a página. `pending` fica true enquanto o servidor responde.
+ */
+export function useAdminRun() {
+  const router = useRouter();
+  const toast = useToast();
+  const [pending, startTransition] = useTransition();
+  const run = useCallback(
+    (op: AdminOp, success?: string, after?: (res: AdminOpResult) => void) =>
+      startTransition(async () => {
+        const res = await adminMutate(op).catch(() => ({ ok: false as const, error: "Verifique a ligação à internet e tente de novo." }));
+        if (!res.ok) toast({ title: "Não foi guardado", description: res.error, tone: "error" });
+        else if (res.message) toast({ title: success ?? "Guardado", description: res.message, tone: "info" });
+        else if (success) toast({ title: success });
+        after?.(res);
+        router.refresh();
+      }),
+    [router, toast],
+  );
+  return { run, pending };
 }
 
 /* ------------------------------------------------------------------ */
@@ -207,15 +194,6 @@ export function slugify(s: string) {
   return normalize(s)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-/** Preço pago por um participante (fase em vigor na data da inscrição). */
-export function participantPrice(events: SportsEvent[], p: Participant) {
-  const ev = events.find((e) => e.slug === p.eventSlug);
-  const dist = ev?.distances.find((d) => d.id === p.distanceId);
-  if (!dist || dist.tiers.length === 0) return 0;
-  const day = p.registeredAt.slice(0, 10);
-  return (dist.tiers.find((t) => t.until >= day) ?? dist.tiers[dist.tiers.length - 1]).price;
 }
 
 export function downloadFile(filename: string, content: string, type = "text/csv;charset=utf-8") {
@@ -233,8 +211,10 @@ export function toCsv(rows: (string | number | null | undefined)[][]) {
     .map((r) =>
       r
         .map((c) => {
-          const s = c == null ? "" : String(c);
-          return /[",;\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+          const raw = c == null ? "" : String(c);
+          // Evita fórmulas no Excel (12.4, B3)
+          const s = typeof c !== "number" && raw !== "-" && /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+          return /[",;\n']/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
         })
         .join(","),
     )

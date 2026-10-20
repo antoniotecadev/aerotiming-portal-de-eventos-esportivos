@@ -4,10 +4,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { today } from "@/lib/today";
 import type { User } from "@/lib/types";
 import { getCurrentUser } from "../auth";
 import { mapProfile, profileInclude } from "../mappers";
+import { eraseRegistrationsOf } from "../privacy";
 import { LIMITS, hitAll, tooManyMessage } from "../rate-limit";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string; field?: string };
@@ -134,14 +134,8 @@ export async function deleteAccount(input: { confirm: string }): Promise<Result>
     return { ok: false, error: "É o único administrador. Promova outra pessoa a administrador antes de apagar a sua conta." };
   }
 
-  const future = await prisma.registration.findMany({
-    where: { userId: me.id, status: { in: ["pagamento_pendente", "confirmada"] }, event: { date: { gte: new Date(`${today()}T00:00:00Z`) } } },
-    select: { id: true, distanceId: true },
-  });
-  await prisma.$transaction([
-    ...future.map((r) => prisma.registration.update({ where: { id: r.id }, data: { status: "cancelada", cancelledAt: new Date() } })),
-    ...future.map((r) => prisma.eventDistance.update({ where: { id: r.distanceId }, data: { slotsTaken: { decrement: 1 } } })),
-  ]);
+  // Cancela as inscrições futuras (devolve as vagas) e anonimiza as passadas — Lei n.º 22/11 (12.5)
+  await eraseRegistrationsOf(me.id);
 
   const { error } = await createAdminClient().auth.admin.deleteUser(me.id);
   if (error) return { ok: false, error: "Não foi possível apagar a conta. Tente novamente ou fale connosco." };

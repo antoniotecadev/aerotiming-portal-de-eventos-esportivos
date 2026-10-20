@@ -9,7 +9,21 @@ export interface LegalSection {
 }
 
 /** Página de texto legal legível: índice à esquerda e secções numeradas. */
-export function LegalPage({ title, description, updated, summary, sections }: { title: string; description: string; updated: string; summary: string[]; sections: LegalSection[] }) {
+export function LegalPage({
+  title,
+  description,
+  updated,
+  summary,
+  sections,
+  contactEmail,
+}: {
+  title: string;
+  description: string;
+  updated: string;
+  summary: string[];
+  sections: LegalSection[];
+  contactEmail: string;
+}) {
   return (
     <>
       <PageHeader eyebrow="Informação legal" title={title} description={description} />
@@ -70,8 +84,13 @@ export function LegalPage({ title, description, updated, summary, sections }: { 
             Tem dúvidas sobre este documento?{" "}
             <Link href="/contacto" className="font-semibold text-brand-700 hover:underline">
               Fale connosco
-            </Link>{" "}
-            ou escreva para <a href="mailto:privacidade@conexaosport.ao" className="font-semibold text-brand-700 hover:underline">privacidade@conexaosport.ao</a>.
+            </Link>
+            {contactEmail && (
+              <>
+                {" "}ou escreva para <a href={`mailto:${contactEmail}`} className="font-semibold text-brand-700 hover:underline">{contactEmail}</a>
+              </>
+            )}
+            .
           </p>
         </article>
       </div>

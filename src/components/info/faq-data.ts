@@ -17,7 +17,7 @@ export const FAQ: FaqGroup[] = [
     items: [
       {
         q: "Como me inscrevo numa prova?",
-        a: ["Abra a página do evento, carregue em «Inscrever-me», escolha a distância, confirme os seus dados e escolha como quer pagar. No fim recebe um SMS e um e-mail com a confirmação."],
+        a: ["Abra a página do evento, carregue em «Inscrever-me», escolha a distância, confirme os seus dados e escolha como quer pagar. No fim aparecem as instruções de pagamento; quando a organização confirmar o pagamento, o bilhete e o dorsal ficam na sua conta, em «As minhas inscrições»."],
       },
       {
         q: "Preciso de criar conta para me inscrever?",
@@ -118,7 +118,7 @@ export const FAQ: FaqGroup[] = [
       },
       {
         q: "E se chover ou a prova for adiada?",
-        a: ["Avisamos por SMS, e-mail e nas redes sociais. Se a prova for cancelada pela organização, o valor da inscrição é devolvido."],
+        a: ["Avisamos na página do evento e nas nossas redes sociais. Se a prova for cancelada pela organização, o valor da inscrição é devolvido."],
       },
     ],
   },
@@ -150,7 +150,7 @@ export const FAQ: FaqGroup[] = [
     items: [
       {
         q: "Esqueci-me da palavra-passe. Como entro?",
-        a: ["Na página «Entrar» carregue em «Esqueci-me da palavra-passe». Enviamos um código por SMS ou e-mail para criar uma palavra-passe nova."],
+        a: ["Na página «Entrar» carregue em «Esqueci-me da palavra-passe». Enviamos um link para o seu e-mail para criar uma palavra-passe nova."],
       },
       {
         q: "Como mudo os meus dados (nome, telemóvel, t-shirt)?",

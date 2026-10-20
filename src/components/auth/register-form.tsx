@@ -34,7 +34,7 @@ export function RegisterForm() {
     if (!terms) return setErrors({ terms: "Para continuar, aceite os termos e a política de privacidade." });
     setErrors({});
     startTransition(async () => {
-      const res = await signUp({ name, email, password, next });
+      const res = await signUp({ name, email, password, acceptedTerms: terms, next });
       if (!res.ok) {
         setErrors(res.field ? { [res.field]: res.error } : { form: res.error });
         return;

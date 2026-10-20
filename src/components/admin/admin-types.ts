@@ -1,5 +1,5 @@
 // Tipos do painel partilhados entre o servidor (src/server/queries/admin.ts) e o cliente (admin-store.tsx).
-import type { Banner, Category, Participant, RaceResult, Registration, SportsEvent, Sponsor, User } from "@/lib/types";
+import type { Banner, Category, Participant, SportsEvent, Sponsor } from "@/lib/types";
 import type { SiteSettings } from "@/lib/site";
 
 export { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site";
@@ -13,12 +13,12 @@ export type AdminEvent = SportsEvent & {
 
 export type AdminParticipant = Participant & { kitPickedUp?: boolean };
 
+/**
+ * Dados partilhados por todas as páginas do painel (carregados no layout). As listas que crescem sem
+ * limite — inscrições, resultados e utilizadores — são carregadas pela própria página, paginadas (12.10).
+ */
 export interface AdminData {
   events: AdminEvent[];
-  participants: AdminParticipant[];
-  results: RaceResult[];
-  users: User[];
-  registrations: Registration[];
   banners: Banner[];
   sponsors: Sponsor[];
   categories: Category[];
@@ -29,10 +29,6 @@ export interface AdminData {
 
 export type Collections = {
   events: AdminEvent;
-  participants: AdminParticipant;
-  results: RaceResult;
-  users: User;
-  registrations: Registration;
   banners: Banner;
   sponsors: Sponsor;
   categories: Category;

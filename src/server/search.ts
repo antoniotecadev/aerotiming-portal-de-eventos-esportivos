@@ -22,4 +22,8 @@ export function textMatch(raw: string | undefined, bib: Prisma.Sql, text: Prisma
   return Prisma.sql`(${bib} = ${q} OR ${bib} LIKE ${`${like}%`} OR public.search_norm(${text}) LIKE '%' || public.search_norm(${like}) || '%')`;
 }
 
-export const and = (conds: (Prisma.Sql | null)[]) => Prisma.join(conds.filter((c): c is Prisma.Sql => !!c), " AND ");
+/** Junta as condições com AND (sem nenhuma: TRUE). */
+export function and(conds: (Prisma.Sql | null | false)[]) {
+  const list = conds.filter((c): c is Prisma.Sql => !!c);
+  return list.length ? Prisma.join(list, " AND ") : Prisma.sql`TRUE`;
+}

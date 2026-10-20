@@ -166,7 +166,7 @@ function SponsorModal({ sponsor, onClose }: { sponsor: Sponsor | "novo" | null; 
       }
     >
       <div className="space-y-5 p-5 sm:p-6">
-        <Field label="Logótipo" required error={errors.logo} hint="De preferência SVG ou PNG com fundo transparente.">
+        <Field label="Logótipo" required error={errors.logo} hint="De preferência PNG com fundo transparente.">
           <ImageUpload value={form.logo} onChange={(logo) => set({ logo })} aspect="aspect-[3/1]" fit="contain" label="Carregar logótipo" />
         </Field>
         <Field label="Nome" htmlFor="s-name" required error={errors.name}>

@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/info/legal-page";
+import { legalEntity, privacyEmail } from "@/lib/site";
+import { getSiteSettings } from "@/server/queries/site";
 
 export const metadata: Metadata = { title: "Termos e condições", description: "Regras de utilização do site ConexãoSport e das inscrições em eventos." };
 
-export default function TermosPage() {
+export default async function TermosPage() {
+  const s = await getSiteSettings();
   return (
     <LegalPage
+      contactEmail={privacyEmail(s)}
       title="Termos e condições"
       description="As regras para usar o site ConexãoSport e para se inscrever nos eventos."
       updated="1 de Setembro de 2026"
@@ -20,7 +24,7 @@ export default function TermosPage() {
           id: "quem-somos",
           title: "Quem somos",
           body: [
-            "O site conexaosport.ao é gerido pela ConexãoSport, Lda., com sede em Luanda, Angola (NIF 5000000000 — texto provisório). Prestamos serviços de inscrição online, cronometragem electrónica e publicação de resultados de eventos desportivos.",
+            `Este site é gerido pela ${legalEntity(s)}, com sede em ${s.address || "Luanda, Angola"}. Prestamos serviços de inscrição online, cronometragem electrónica e publicação de resultados de eventos desportivos.`,
             "Em muitos eventos, a ConexãoSport actua em nome do organizador da prova. O organizador é responsável pelo evento em si (percurso, segurança, prémios); a ConexãoSport é responsável pela plataforma de inscrição e pela cronometragem.",
           ],
         },
