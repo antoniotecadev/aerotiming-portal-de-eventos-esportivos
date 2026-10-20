@@ -4,7 +4,8 @@ import { CalendarDays, Clock, MapPin, Ticket } from "lucide-react";
 import type { SportsEvent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { dateParts, formatDateShort, formatKm, formatKz } from "@/lib/format";
-import { getCategory, hasResults, isOpen, minPrice, slotsLeft } from "@/lib/data";
+import { isOpen, minPrice, slotsLeft } from "@/lib/event-utils";
+import { today } from "@/lib/today";
 import { StatusBadge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { CATEGORY_TONE, CategoryIcon } from "./category-icon";
@@ -12,7 +13,7 @@ import { CATEGORY_TONE, CategoryIcon } from "./category-icon";
 function EventCTA({ event, full }: { event: SportsEvent; full?: boolean }) {
   const base = `/eventos/${event.slug}`;
   if (event.status === "terminado")
-    return hasResults(event.slug) ? (
+    return event.resultsPublished ? (
       <ButtonLink href={`/resultados/${event.slug}`} variant="dark" className={cn(full && "w-full")}>Ver resultados</ButtonLink>
     ) : null;
   if (isOpen(event))
@@ -25,7 +26,8 @@ function EventCTA({ event, full }: { event: SportsEvent; full?: boolean }) {
 }
 
 export function EventCard({ event, layout = "vertical", priority }: { event: SportsEvent; layout?: "vertical" | "horizontal"; priority?: boolean }) {
-  const cat = getCategory(event.category);
+  const categoryName = event.categoryName ?? event.category;
+  const price = minPrice(event, today());
   const href = `/eventos/${event.slug}`;
   const left = slotsLeft(event);
   const { day, month } = dateParts(event.date);
@@ -41,7 +43,7 @@ export function EventCard({ event, layout = "vertical", priority }: { event: Spo
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge status={event.status} />
             <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", CATEGORY_TONE[event.category])}>
-              <CategoryIcon slug={event.category} className="size-3.5" /> {cat.name}
+              <CategoryIcon slug={event.category} className="size-3.5" /> {categoryName}
             </span>
           </div>
           <h3 className="text-lg leading-snug font-bold text-ink-900">
@@ -53,7 +55,7 @@ export function EventCard({ event, layout = "vertical", priority }: { event: Spo
           </ul>
           <div className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-1">
             {event.status !== "terminado" && (
-              <p className="text-sm text-ink-500">Desde <strong className="text-base text-ink-900">{formatKz(minPrice(event))}</strong></p>
+              <p className="text-sm text-ink-500">Desde <strong className="text-base text-ink-900">{formatKz(price)}</strong></p>
             )}
             <div className="flex gap-2">
               <ButtonLink href={href} variant="outline" size="sm">Detalhes</ButtonLink>
@@ -85,7 +87,7 @@ export function EventCard({ event, layout = "vertical", priority }: { event: Spo
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-center gap-2 text-xs font-semibold">
           <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5", CATEGORY_TONE[event.category])}>
-            <CategoryIcon slug={event.category} className="size-3.5" /> {cat.name}
+            <CategoryIcon slug={event.category} className="size-3.5" /> {categoryName}
           </span>
           <span className="truncate text-ink-500">{event.distances.map((d) => formatKm(d.distanceKm)).join(" · ")}</span>
         </div>
@@ -102,7 +104,7 @@ export function EventCard({ event, layout = "vertical", priority }: { event: Spo
           ) : (
             <div>
               <p className="text-xs text-ink-500">Inscrição desde</p>
-              <p className="text-lg font-extrabold text-ink-900">{formatKz(minPrice(event))}</p>
+              <p className="text-lg font-extrabold text-ink-900">{formatKz(price)}</p>
             </div>
           )}
           {open && left < 600 && <p className="text-right text-xs font-semibold text-amber-700">Restam {left} vagas</p>}

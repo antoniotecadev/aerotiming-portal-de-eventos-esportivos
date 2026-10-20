@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CalendarCheck2, Home, MapPin, Shield, Ticket, Trophy, UserRound, Users } from "lucide-react";
+import { CalendarCheck2, Home, LayoutDashboard, MapPin, Shield, Ticket, Trophy, UserRound, Users } from "lucide-react";
+import { ButtonLink } from "@/components/ui/button";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { monthName, parseDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { registrationsOf, resultsOf } from "./profile-data";
 
 const NAV = [
   { href: "/perfil", label: "Resumo", Icon: Home },
@@ -36,30 +36,24 @@ function ProfileSkeleton() {
   );
 }
 
-export function ProfileShell({ children }: { children: React.ReactNode }) {
-  const { user, ready } = useAuth();
+export function ProfileShell({ children, stats: counts }: { children: React.ReactNode; stats: { registrations: number; finished: number; km: number } }) {
+  const { user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  // Se a pessoa terminou sessão aqui (ou apagou a conta), vai para o início;
-  // se chegou sem sessão, vai para "Entrar" e volta depois a esta página.
-  const hadUser = useRef(false);
+  // A sessão é verificada no servidor (perfil/layout.tsx). Se a pessoa terminar sessão aqui, vai para o início.
   useEffect(() => {
-    if (user) hadUser.current = true;
-    else if (ready) router.replace(hadUser.current ? "/" : `/entrar?next=${encodeURIComponent(pathname)}`);
-  }, [ready, user, router, pathname]);
+    if (!user) router.replace("/");
+  }, [user, router]);
 
-  if (!ready || !user) return <ProfileSkeleton />;
+  if (!user) return <ProfileSkeleton />;
 
-  const regs = registrationsOf(user).filter((r) => r.status !== "cancelada");
-  const results = resultsOf(user).filter((r) => r.status === "terminou");
-  const km = results.reduce((acc, r) => acc + (r.distance?.distanceKm ?? 0), 0);
   const since = user.createdAt ? parseDate(user.createdAt) : null;
 
   const stats = [
-    { label: "Inscrições", value: regs.length, Icon: Ticket },
-    { label: "Provas terminadas", value: results.length, Icon: CalendarCheck2 },
-    { label: "Km em prova", value: Math.round(km), Icon: Trophy },
+    { label: "Inscrições", value: counts.registrations, Icon: Ticket },
+    { label: "Provas terminadas", value: counts.finished, Icon: CalendarCheck2 },
+    { label: "Km em prova", value: counts.km, Icon: Trophy },
   ];
 
   return (
@@ -85,6 +79,11 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
                   </Badge>
                 )}
               </div>
+              {(user.role === "admin" || user.role === "organizador") && (
+                <ButtonLink href="/admin" variant="white" size="sm" className="mt-3">
+                  <LayoutDashboard /> Painel de gestão
+                </ButtonLink>
+              )}
             </div>
           </div>
           <dl className="grid grid-cols-3 gap-2 sm:gap-3">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "./logo";
 import { SOCIAL_LINKS } from "./social-icons";
-import { CATEGORIES } from "@/lib/data";
+import { listCategories } from "@/server/queries/catalog";
 
 const COLUMNS = [
   {
@@ -34,7 +34,8 @@ const COLUMNS = [
   },
 ];
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const categories = await listCategories();
   return (
     <footer className="bg-ink-950 text-ink-300">
       <div className="h-1.5 bg-[linear-gradient(90deg,#e23d0b_0_33%,#0e1a33_33%_66%,#ffc21a_66%)]" aria-hidden />
@@ -71,7 +72,7 @@ export function SiteFooter() {
       <div className="border-t border-white/5">
         <div className="container-page flex flex-wrap gap-x-5 gap-y-2 py-5 text-sm text-ink-400">
           <span className="font-semibold text-ink-300">Modalidades:</span>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <Link key={c.slug} href={`/eventos?categoria=${c.slug}`} className="hover:text-white">{c.name}</Link>
           ))}
         </div>

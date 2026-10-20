@@ -20,6 +20,7 @@ export type EventStatus =
   | "inscricoes-abertas"
   | "ultimas-vagas"
   | "esgotado"
+  | "inscricoes-encerradas" // prazo de inscrição terminou
   | "a-decorrer"
   | "terminado"
   | "cancelado";
@@ -100,6 +101,11 @@ export interface SportsEvent {
   sponsorIds: string[];
   createdAt: string; // ISO — usado para "Adicionados recentemente"
   featured?: boolean;
+  // Preenchidos pela base de dados (src/server/mappers.ts); ausentes nos mocks
+  categoryName?: string;
+  resultsPublished?: boolean;
+  priceFrom?: number; // preço mais baixo em vigor hoje (Kz)
+  sponsors?: Sponsor[]; // só na página de detalhe
 }
 
 export type Gender = "M" | "F";
@@ -145,6 +151,8 @@ export interface RaceResult {
 
 export type UserRole = "atleta" | "organizador" | "admin";
 
+/** Utilizador com sessão iniciada. Os campos de texto vêm vazios ("") se ainda não foram preenchidos
+ * (são pedidos na primeira inscrição). */
 export interface User {
   id: string;
   name: string;
@@ -152,24 +160,40 @@ export interface User {
   phone: string;
   role: UserRole;
   birthDate: string;
-  gender: Gender;
+  gender?: Gender;
   documentType: "BI" | "Passaporte";
   documentNumber: string;
   province: string;
   city: string;
   club: string;
-  tshirt: TShirtSize;
+  tshirt?: TShirtSize;
   bloodType?: string;
   emergencyContact: { name: string; phone: string; relation: string };
+  notifications?: { sms: boolean; email: boolean; whatsapp: boolean };
+  /** Nº de eventos onde a pessoa está na equipa (organizador/staff) — dá acesso ao painel. */
+  staffEvents?: number;
   createdAt: string;
   active: boolean;
 }
 
 export type TShirtSize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
 
-export type PaymentMethod = "multicaixa-express" | "referencia" | "transferencia";
+/** Pagamento MANUAL (D1): o atleta paga fora do site e envia o comprovativo. */
+export type PaymentMethod = "multicaixa-express" | "transferencia" | "deposito" | "kwik";
 
-export type RegistrationStatus = "confirmada" | "pagamento-pendente" | "cancelada";
+/** Estado de um pagamento manual. */
+export type PaymentState = "pendente" | "em-analise" | "confirmado" | "rejeitado" | "expirado" | "cancelado" | "reembolsado";
+
+/** Contas para onde o atleta paga (do evento ou, por omissão, da AeroTiming). */
+export interface PaymentAccounts {
+  iban: { bank: string; holder: string; iban: string }[];
+  multicaixaExpress?: { phone: string; holder: string };
+  kwik?: { id: string; holder: string };
+  depositInstructions?: string;
+  proofDeadlineHours: number;
+}
+
+export type RegistrationStatus = "confirmada" | "pagamento-pendente" | "cancelada" | "expirada";
 
 export interface Registration {
   id: string;
@@ -183,11 +207,12 @@ export interface Registration {
   tshirt: TShirtSize;
   payment: {
     method: PaymentMethod;
+    state: PaymentState;
     amount: number;
-    entity?: string;
-    reference?: string;
-    expiresAt?: string;
-    paidAt?: string;
+    reference: string; // descritivo a indicar no pagamento (= código da inscrição)
+    expiresAt?: string; // prazo para enviar o comprovativo
+    confirmedAt?: string;
+    reviewNote?: string; // motivo da rejeição
   };
   kitStatus: "por-levantar" | "levantado";
   createdAt: string;
@@ -212,4 +237,18 @@ export interface Sponsor {
   url: string;
   tier: "principal" | "oficial" | "apoio";
   active: boolean;
+}
+
+/** Inscrição do utilizador com o evento e a distância (perfil). */
+export interface RegistrationWithEvent extends Registration {
+  event: SportsEvent;
+  distance: EventDistance | undefined;
+  /** Contas para pagar (só nas inscrições por pagar). */
+  accounts?: PaymentAccounts;
+}
+
+/** Resultado do utilizador com o evento e a distância (perfil). */
+export interface ResultWithEvent extends RaceResult {
+  event: SportsEvent;
+  distance: EventDistance | undefined;
 }

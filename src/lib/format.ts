@@ -1,4 +1,4 @@
-import type { EventStatus, PaymentMethod, PaymentStatus, RegistrationStatus, ResultStatus } from "./types";
+import type { EventStatus, PaymentMethod, PaymentState, PaymentStatus, RegistrationStatus, ResultStatus } from "./types";
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -60,6 +60,7 @@ export const EVENT_STATUS: Record<EventStatus, { label: string; tone: "green" | 
   "inscricoes-abertas": { label: "Inscrições abertas", tone: "green" },
   "ultimas-vagas": { label: "Últimas vagas", tone: "amber" },
   esgotado: { label: "Esgotado", tone: "red" },
+  "inscricoes-encerradas": { label: "Inscrições encerradas", tone: "gray" },
   "a-decorrer": { label: "A decorrer", tone: "violet" },
   terminado: { label: "Terminado", tone: "gray" },
   cancelado: { label: "Cancelado", tone: "red" },
@@ -71,10 +72,21 @@ export const PAYMENT_STATUS: Record<PaymentStatus, { label: string; tone: "green
   cancelado: { label: "Cancelado", tone: "red" },
 };
 
-export const REGISTRATION_STATUS: Record<RegistrationStatus, { label: string; tone: "green" | "amber" | "red" }> = {
+export const REGISTRATION_STATUS: Record<RegistrationStatus, { label: string; tone: "green" | "amber" | "red" | "gray" }> = {
   confirmada: { label: "Confirmada", tone: "green" },
   "pagamento-pendente": { label: "Aguarda pagamento", tone: "amber" },
   cancelada: { label: "Cancelada", tone: "red" },
+  expirada: { label: "Expirada", tone: "gray" },
+};
+
+export const PAYMENT_STATE: Record<PaymentState, { label: string; tone: "green" | "amber" | "red" | "blue" | "gray" }> = {
+  pendente: { label: "Por pagar", tone: "amber" },
+  "em-analise": { label: "Comprovativo em análise", tone: "blue" },
+  confirmado: { label: "Pago", tone: "green" },
+  rejeitado: { label: "Comprovativo rejeitado", tone: "red" },
+  expirado: { label: "Prazo expirado", tone: "gray" },
+  cancelado: { label: "Cancelado", tone: "gray" },
+  reembolsado: { label: "Reembolsado", tone: "gray" },
 };
 
 export const RESULT_STATUS: Record<ResultStatus, string> = {
@@ -86,8 +98,9 @@ export const RESULT_STATUS: Record<ResultStatus, string> = {
 
 export const PAYMENT_METHOD: Record<PaymentMethod, string> = {
   "multicaixa-express": "Multicaixa Express",
-  referencia: "Referência Multicaixa",
-  transferencia: "Transferência bancária",
+  transferencia: "Transferência bancária (IBAN)",
+  deposito: "Depósito bancário",
+  kwik: "KWiK",
 };
 
 export const GENDER_LABEL = { M: "Masculino", F: "Feminino" } as const;

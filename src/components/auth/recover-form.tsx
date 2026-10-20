@@ -1,193 +1,80 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowLeft, CheckCircle2, KeyRound, LogIn, MessageSquareText, Send } from "lucide-react";
-import { FormError, PasswordInput, PasswordStrength } from "@/components/auth/password-input";
+import { useState, useTransition } from "react";
+import { ArrowLeft, MailCheck, Send } from "lucide-react";
+import { FormError } from "@/components/auth/password-input";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
-import { useToast } from "@/components/ui/toast";
+import { requestPasswordReset } from "@/server/actions/auth";
 
-type Stage = "identify" | "code" | "password" | "done";
-
-/** Esconde parte do contacto: carlos@exemplo.ao → ca•••@exemplo.ao */
-function mask(v: string) {
-  const t = v.trim();
-  if (t.includes("@")) {
-    const [user, domain] = t.split("@");
-    return `${user.slice(0, 2)}•••@${domain}`;
-  }
-  const d = t.replace(/\D/g, "");
-  return `+244 ••• ••• ${d.slice(-3)}`;
-}
-
+/** Passo 1 da recuperação: pedir o link por e-mail. O passo 2 é /nova-palavra-passe. */
 export function RecoverForm() {
-  const toast = useToast();
-  const [stage, setStage] = useState<Stage>("identify");
-  const [identifier, setIdentifier] = useState("");
-  const [code, setCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
+  const [sent, setSent] = useState(false);
+  const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
-    return () => clearTimeout(t);
-  }, [cooldown]);
+  function submit() {
+    setError(null);
+    startTransition(async () => {
+      const res = await requestPasswordReset({ email });
+      if (!res.ok) return setError(res.error);
+      setSent(true);
+    });
+  }
 
-  const wait = (fn: () => void) => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      fn();
-    }, 500);
-  };
-
-  const viaEmail = identifier.includes("@");
-
-  if (stage === "done")
+  if (sent)
     return (
       <div className="text-center">
         <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle2 className="size-9" />
+          <MailCheck className="size-9" />
         </div>
-        <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-ink-900">Palavra-passe alterada!</h1>
-        <p className="mt-2 text-ink-600">Já pode entrar na sua conta com a nova palavra-passe.</p>
-        <ButtonLink href="/entrar" size="lg" className="mt-8 w-full">
-          <LogIn /> Entrar agora
-        </ButtonLink>
+        <h1 className="mt-5 text-3xl font-extrabold tracking-tight text-ink-900">Veja o seu e-mail</h1>
+        <p className="mt-2 text-ink-600">
+          Se existir uma conta com <strong className="text-ink-900">{email.trim().toLowerCase()}</strong>, enviámos um link para criar uma nova palavra-passe.
+        </p>
+        <ol className="mx-auto mt-6 max-w-sm space-y-2 text-left text-[15px] text-ink-700">
+          <li>1. Abra a mensagem da AeroTiming.</li>
+          <li>2. Toque em <strong>“Redefinir palavra-passe”</strong>.</li>
+          <li>3. Escreva a nova palavra-passe.</li>
+        </ol>
+        <p className="mt-6 rounded-xl bg-ink-50 p-4 text-sm text-ink-600">Não chegou? Veja a pasta de <em>Spam</em> ou espere 1 minuto e tente de novo.</p>
+        <div className="mt-8 flex flex-col gap-3">
+          <Button variant="outline" size="lg" onClick={() => setSent(false)}>
+            Enviar outra vez
+          </Button>
+          <ButtonLink href="/entrar" variant="ghost">
+            <ArrowLeft /> Voltar a entrar
+          </ButtonLink>
+        </div>
       </div>
     );
 
   return (
     <div>
-      <div className="mb-6 flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
-        {stage === "identify" ? <KeyRound className="size-7" /> : stage === "code" ? <MessageSquareText className="size-7" /> : <KeyRound className="size-7" />}
-      </div>
-
-      {stage === "identify" && (
-        <>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">Esqueceu-se da palavra-passe?</h1>
-          <p className="mt-2 text-ink-600">Não há problema. Diga-nos o seu e-mail ou telemóvel e enviamos um código para criar uma nova.</p>
-          <form
-            className="mt-8 space-y-5"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              setError(null);
-              const v = identifier.trim();
-              const ok = v.includes("@") ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) : v.replace(/\D/g, "").length >= 9;
-              if (!ok) return setError("Escreva um e-mail válido ou um número de telemóvel com 9 dígitos.");
-              wait(() => {
-                setStage("code");
-                setCooldown(60);
-              });
-            }}
-          >
-            <FormError>{error}</FormError>
-            <Field label="E-mail ou telemóvel" htmlFor="identifier" hint="O mesmo que usou para criar a conta.">
-              <Input id="identifier" autoComplete="username" placeholder="nome@exemplo.ao ou 923 000 000" value={identifier} onChange={(e) => setIdentifier(e.target.value)} aria-invalid={!!error} />
-            </Field>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              <Send /> {loading ? "A enviar…" : "Enviar código"}
-            </Button>
-          </form>
-        </>
-      )}
-
-      {stage === "code" && (
-        <>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">{viaEmail ? "Enviámos um código por e-mail" : "Enviámos um código por SMS"}</h1>
-          <p className="mt-2 text-ink-600">
-            Escreva o código de 6 números que enviámos para <strong className="text-ink-900">{mask(identifier)}</strong>. Pode demorar até 1 minuto a chegar.
-          </p>
-          <form
-            className="mt-8 space-y-5"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              setError(null);
-              if (!/^\d{6}$/.test(code)) return setError("O código tem 6 números. Verifique a mensagem que recebeu.");
-              wait(() => setStage("password"));
-            }}
-          >
-            <FormError>{error}</FormError>
-            <Field label="Código de 6 números" htmlFor="code" hint="Demonstração: pode usar qualquer código, ex.: 123456.">
-              <Input
-                id="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                placeholder="••••••"
-                className="h-14 text-center font-mono text-2xl tracking-[0.5em]"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                aria-invalid={!!error}
-              />
-            </Field>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading ? "A verificar…" : "Confirmar código"}
-            </Button>
-            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-              <button type="button" className="inline-flex items-center gap-1.5 font-semibold text-ink-600 hover:text-ink-900" onClick={() => setStage("identify")}>
-                <ArrowLeft className="size-4" /> Mudar contacto
-              </button>
-              <button
-                type="button"
-                disabled={cooldown > 0}
-                className="font-semibold text-brand-700 hover:underline disabled:text-ink-400 disabled:no-underline"
-                onClick={() => {
-                  setCooldown(60);
-                  toast({ title: "Código reenviado", description: `Enviámos um novo código para ${mask(identifier)}.`, tone: "info" });
-                }}
-              >
-                {cooldown > 0 ? `Reenviar código em ${cooldown}s` : "Não recebi — reenviar código"}
-              </button>
-            </div>
-          </form>
-        </>
-      )}
-
-      {stage === "password" && (
-        <>
-          <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">Crie uma nova palavra-passe</h1>
-          <p className="mt-2 text-ink-600">Escolha uma palavra-passe que não use noutros sites.</p>
-          <form
-            className="mt-8 space-y-5"
-            noValidate
-            onSubmit={(e) => {
-              e.preventDefault();
-              setError(null);
-              if (password.length < 6) return setError("A palavra-passe precisa de ter pelo menos 6 caracteres.");
-              if (password !== confirm) return setError("As duas palavras-passe não são iguais. Escreva de novo.");
-              wait(() => setStage("done"));
-            }}
-          >
-            <FormError>{error}</FormError>
-            <div className="space-y-1.5">
-              <label htmlFor="new-password" className="block text-sm font-semibold text-ink-800">
-                Nova palavra-passe
-              </label>
-              <PasswordInput id="new-password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <PasswordStrength value={password} />
-            </div>
-            <Field label="Repita a nova palavra-passe" htmlFor="confirm-password">
-              <PasswordInput id="confirm-password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
-            </Field>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading ? "A guardar…" : "Guardar nova palavra-passe"}
-            </Button>
-          </form>
-        </>
-      )}
-
-      <p className="mt-8 text-center text-[15px] text-ink-600">
+      <h1 className="text-3xl font-extrabold tracking-tight text-ink-900">Recuperar palavra-passe</h1>
+      <p className="mt-2 text-ink-600">Escreva o e-mail da sua conta. Enviamos um link para criar uma palavra-passe nova.</p>
+      <form
+        className="mt-8 space-y-5"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          submit();
+        }}
+      >
+        <FormError>{error}</FormError>
+        <Field label="E-mail" htmlFor="email">
+          <Input id="email" type="email" inputMode="email" autoComplete="email" placeholder="nome@exemplo.ao" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Button type="submit" size="lg" className="w-full" disabled={pending}>
+          <Send /> {pending ? "A enviar…" : "Enviar link"}
+        </Button>
+      </form>
+      <p className="mt-6 text-center text-[15px] text-ink-600">
         Lembrou-se?{" "}
         <Link href="/entrar" className="font-semibold text-brand-700 hover:underline">
-          Voltar a entrar
+          Entrar
         </Link>
       </p>
     </div>

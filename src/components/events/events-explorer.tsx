@@ -3,7 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { LayoutGrid, List, Search, SlidersHorizontal, X } from "lucide-react";
-import { CATEGORIES, EVENTS, PROVINCES, TODAY, filterEvents, minPrice, type EventFilters } from "@/lib/data";
+import { filterEvents, minPrice, type EventFilters } from "@/lib/event-utils";
+import { PROVINCES } from "@/lib/constants";
+import type { Category, SportsEvent } from "@/lib/types";
 import { monthName, parseDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,12 +24,12 @@ const ESTADOS = [
   { id: "terminadas", label: "Já realizados" },
 ] as const;
 
-function monthsAvailable() {
-  const set = new Set(EVENTS.map((e) => e.date.slice(0, 7)));
+function monthsAvailable(events: SportsEvent[]) {
+  const set = new Set(events.map((e) => e.date.slice(0, 7)));
   return [...set].sort();
 }
 
-export function EventsExplorer() {
+export function EventsExplorer({ events, categories, today }: { events: SportsEvent[]; categories: Category[]; today: string }) {
   const sp = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -49,17 +51,17 @@ export function EventsExplorer() {
   };
 
   const list = useMemo(() => {
-    const base = estado === "terminadas" ? EVENTS : EVENTS.filter((e) => e.date >= TODAY);
+    const base = estado === "terminadas" ? events : events.filter((e) => e.date >= today);
     const f: EventFilters = { q, categoria, provincia, mes, estado: estado === "proximos" ? "todas" : estado };
     const out = filterEvents(base, f);
     return out.sort((a, b) =>
-      ordem === "preco" ? minPrice(a) - minPrice(b) : ordem === "recentes" ? b.createdAt.localeCompare(a.createdAt) : estado === "terminadas" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date),
+      ordem === "preco" ? minPrice(a, today) - minPrice(b, today) : ordem === "recentes" ? b.createdAt.localeCompare(a.createdAt) : estado === "terminadas" ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date),
     );
-  }, [q, categoria, provincia, mes, estado, ordem]);
+  }, [events, today, q, categoria, provincia, mes, estado, ordem]);
 
   const active = [
     q && { key: "q", label: `"${q}"` },
-    categoria && { key: "categoria", label: CATEGORIES.find((c) => c.slug === categoria)?.name ?? categoria },
+    categoria && { key: "categoria", label: categories.find((c) => c.slug === categoria)?.name ?? categoria },
     provincia && { key: "provincia", label: provincia },
     mes && { key: "mes", label: `${monthName(parseDate(`${mes}-01`).getMonth())} ${mes.slice(0, 4)}` },
   ].filter(Boolean) as { key: string; label: string }[];
@@ -86,7 +88,7 @@ export function EventsExplorer() {
         <p className="mb-2 text-sm font-bold text-ink-800">Modalidade</p>
         <div className="flex flex-wrap gap-2">
           <button onClick={() => set({ categoria: null })} className={cn("rounded-full px-3.5 py-2 text-sm font-semibold", !categoria ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200")}>Todas</button>
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button key={c.slug} onClick={() => set({ categoria: categoria === c.slug ? null : c.slug })} className={cn("inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold", categoria === c.slug ? "bg-ink-900 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200")}>
               <CategoryIcon slug={c.slug} className="size-4" /> {c.name}
             </button>
@@ -104,7 +106,7 @@ export function EventsExplorer() {
         <label htmlFor="f-mes" className="mb-2 block text-sm font-bold text-ink-800">Mês</label>
         <Select id="f-mes" value={mes} onChange={(e) => set({ mes: e.target.value || null })}>
           <option value="">Qualquer mês</option>
-          {monthsAvailable().map((m) => (
+          {monthsAvailable(events).map((m) => (
             <option key={m} value={m}>{monthName(parseDate(`${m}-01`).getMonth())} {m.slice(0, 4)}</option>
           ))}
         </Select>

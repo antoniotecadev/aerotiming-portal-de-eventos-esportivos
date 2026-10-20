@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow_Condensed, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { getCurrentUser } from "@/server/auth";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta", display: "swap" });
@@ -21,11 +22,12 @@ export const viewport: Viewport = {
   themeColor: "#0e1a33",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await getCurrentUser();
   return (
     <html lang="pt-AO" className={`${jakarta.variable} ${barlow.variable}`}>
       <body className="min-h-dvh">
-        <Providers>{children}</Providers>
+        <Providers user={user}>{children}</Providers>
       </body>
     </html>
   );

@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { CalendarDays, ChevronRight, Flag, MapPin, RotateCcw, Search, SearchX, Trophy, UserSearch, X } from "lucide-react";
-import type { CategorySlug } from "@/lib/types";
-import { CATEGORIES } from "@/lib/data";
+import type { Category, CategorySlug } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -111,13 +110,13 @@ export function FindMyResult({ index }: { index: ResultIndexItem[] }) {
 }
 
 /** Lista de provas com resultados, com pesquisa e filtros. */
-export function ResultsDirectory({ events }: { events: ResultEventSummary[] }) {
+export function ResultsDirectory({ events, categories }: { events: ResultEventSummary[]; categories: Category[] }) {
   const [q, setQ] = useState("");
   const [category, setCategory] = useState("");
   const [year, setYear] = useState("");
 
   const years = useMemo(() => [...new Set(events.map((e) => e.date.slice(0, 4)))].sort().reverse(), [events]);
-  const categories = CATEGORIES.filter((c) => events.some((e) => e.category === c.slug));
+  const usedCategories = categories.filter((c) => events.some((e) => e.category === c.slug));
 
   const term = normText(q.trim());
   const list = events.filter(
@@ -143,7 +142,7 @@ export function ResultsDirectory({ events }: { events: ResultEventSummary[] }) {
         </div>
         <Select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Modalidade">
           <option value="">Todas as modalidades</option>
-          {categories.map((c) => (
+          {usedCategories.map((c) => (
             <option key={c.slug} value={c.slug}>{c.name}</option>
           ))}
         </Select>

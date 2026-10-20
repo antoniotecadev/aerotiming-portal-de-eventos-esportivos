@@ -20,6 +20,7 @@ import {
   Ticket,
   Timer,
   Users,
+  PackageCheck,
   X,
 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -36,6 +37,7 @@ const NAV = [
   { href: "/admin/eventos", label: "Eventos", icon: CalendarDays },
   { href: "/admin/inscricoes", label: "Inscrições", icon: Ticket },
   { href: "/admin/resultados", label: "Resultados", icon: Timer },
+  { href: "/checkin", label: "Check-in de kits", icon: PackageCheck },
   { href: "/admin/utilizadores", label: "Utilizadores", icon: Users },
   { href: "/admin/banners", label: "Banners (carrossel)", icon: GalleryHorizontalEnd },
   { href: "/admin/patrocinadores", label: "Patrocinadores", icon: Handshake },
@@ -43,44 +45,11 @@ const NAV = [
   { href: "/admin/definicoes", label: "Definições", icon: Settings },
 ];
 
+/** Áreas só para o admin; o organizador não as vê (e o servidor também as bloqueia). */
+const ADMIN_ONLY = new Set(["/admin/utilizadores", "/admin/banners", "/admin/patrocinadores", "/admin/categorias", "/admin/definicoes"]);
+
 export function AdminShell({ children }: { children: React.ReactNode }) {
-  const { user, ready } = useAuth();
-
-  if (!ready) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-ink-50 text-ink-500">
-        <Loader2 className="size-6 animate-spin" aria-label="A carregar" />
-      </div>
-    );
-  }
-
-  if (!user || (user.role !== "admin" && user.role !== "organizador")) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-ink-50 px-4">
-        <div className="w-full max-w-md rounded-3xl border border-ink-200/70 bg-white p-8 text-center shadow-card">
-          <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
-            <ShieldAlert className="size-7" />
-          </span>
-          <h1 className="mt-5 text-2xl font-extrabold text-ink-900">Acesso restrito</h1>
-          <p className="mt-2 text-ink-600">
-            {user
-              ? "A sua conta não tem permissões para aceder ao painel de gestão. Entre com uma conta de administrador ou organizador."
-              : "O painel de gestão é reservado a administradores e organizadores. Entre na sua conta para continuar."}
-          </p>
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <ButtonLink href="/entrar?next=/admin">Entrar</ButtonLink>
-            <ButtonLink href="/" variant="outline">
-              Voltar ao site
-            </ButtonLink>
-          </div>
-          <p className="mt-6 rounded-xl bg-ink-50 p-3 text-sm text-ink-500">
-            Demonstração: <span className="font-semibold text-ink-700">admin@aerotiming.ao</span> / admin123
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  // O acesso já foi verificado no servidor (src/app/admin/layout.tsx).
   return (
     <AdminStoreProvider>
       <Frame>{children}</Frame>
@@ -123,6 +92,8 @@ function Frame({ children }: { children: React.ReactNode }) {
 
 function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { reset } = useAdmin();
   const toast = useToast();
   const [confirm, setConfirm] = useState(false);
@@ -144,7 +115,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         )}
       </div>
       <ul className="flex-1 space-y-0.5 overflow-y-auto p-3">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.filter((item) => isAdmin || !ADMIN_ONLY.has(item.href)).map(({ href, label, icon: Icon }) => {
           const active = href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
           return (
             <li key={href}>

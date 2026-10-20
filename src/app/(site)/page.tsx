@@ -1,9 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CreditCard, Medal, Search, ShieldCheck, Smartphone, Ticket, Timer, Trophy, UserPlus } from "lucide-react";
-import { BANNERS, CATEGORIES, EVENTS, SPONSORS, TODAY, isOpen, pastEvents, recentEvents, resultsOf, upcomingEvents } from "@/lib/data";
-import { formatDate, formatKz } from "@/lib/format";
-import { daysUntil } from "@/lib/format";
+import { isOpen } from "@/lib/event-utils";
+import { today } from "@/lib/today";
+import { daysUntil, formatDate, formatKz } from "@/lib/format";
+import { listEventsWithResults, listRecentEvents, listUpcomingEvents } from "@/server/queries/events";
+import { listActiveBanners, listActiveSponsors, listCategories } from "@/server/queries/catalog";
+import { listResults } from "@/server/queries/results";
 import { EventCard } from "@/components/events/event-card";
 import { CATEGORY_TONE, CategoryIcon } from "@/components/events/category-icon";
 import { HeroSearch } from "@/components/home/hero-search";
@@ -20,22 +23,34 @@ const STEPS = [
   { Icon: Medal, title: "Levante o kit e corra", text: "Mostre o bilhete no telemóvel, receba o dorsal e divirta-se!" },
 ];
 
-export default function HomePage() {
-  const featured = EVENTS.find((e) => e.featured && isOpen(e))!;
-  const recent = recentEvents(4);
-  const upcoming = upcomingEvents().filter((e) => !recent.includes(e)).slice(0, 4);
-  const lastRace = pastEvents()[0];
-  const lastResults = resultsOf(lastRace.slug).filter((r) => r.distanceId === lastRace.distances[0].id && r.positionGender && r.positionGender <= 3);
+export default async function HomePage() {
+  const [allUpcoming, recent, banners, sponsors, categories, withResults] = await Promise.all([
+    listUpcomingEvents(),
+    listRecentEvents(4),
+    listActiveBanners(),
+    listActiveSponsors(),
+    listCategories(),
+    listEventsWithResults(),
+  ]);
+  const t = today();
+  const featured = allUpcoming.find((e) => e.featured && isOpen(e)) ?? allUpcoming.find(isOpen);
+  const recentIds = new Set(recent.map((e) => e.id));
+  const upcoming = allUpcoming.filter((e) => !recentIds.has(e.id)).slice(0, 4);
+  const lastRace = withResults[0]?.event;
+  const lastResults = lastRace
+    ? (await listResults(lastRace.slug)).filter((r) => r.distanceId === lastRace.distances[0]?.id && r.positionGender && r.positionGender <= 3)
+    : [];
   const podium = (g: "M" | "F") => lastResults.filter((r) => r.gender === g).sort((a, b) => a.positionGender! - b.positionGender!);
-  const days = daysUntil(featured.date, TODAY);
+  const days = featured ? daysUntil(featured.date, t) : 0;
+  const cheapest = allUpcoming.flatMap((e) => e.distances.map((d) => d.tiers[0]?.price ?? 0)).filter(Boolean);
 
   return (
     <>
       {/* HERO + PESQUISA */}
       <section className="relative overflow-hidden bg-ink-900">
         <Image src="/images/eventos/maratona-noite.jpg" alt="" fill priority sizes="100vw" className="object-cover opacity-25" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink-900/40 via-ink-900/80 to-ink-900" />
-        <div className="pointer-events-none absolute -top-40 -right-40 size-[520px] rounded-full bg-brand-600/30 blur-3xl" aria-hidden />
+        <div className="absolute inset-0 bg-linear-to-b from-ink-900/40 via-ink-900/80 to-ink-900" />
+        <div className="pointer-events-none absolute -top-40 -right-40 size-130 rounded-full bg-brand-600/30 blur-3xl" aria-hidden />
         <div className="container-page relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.25fr_1fr] lg:py-20">
           <div className="min-w-0">
             <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-sun-300 backdrop-blur">
@@ -48,12 +63,13 @@ export default function HomePage() {
               Corridas, caminhadas, ciclismo e trail. Inscreva-se em minutos, pague com Multicaixa e veja o seu tempo logo após a meta.
             </p>
             <div className="mt-8">
-              <HeroSearch />
+              <HeroSearch categories={categories} />
             </div>
           </div>
 
           {/* Evento em destaque */}
-          <Link href={`/eventos/${featured.slug}`} className="group relative mx-auto hidden w-full max-w-sm lg:block">
+          {featured && (
+<Link href={`/eventos/${featured.slug}`} className="group relative mx-auto hidden w-full max-w-sm lg:block">
             <div className="absolute -inset-3 rotate-3 rounded-3xl bg-brand-600/40" aria-hidden />
             <div className="relative overflow-hidden rounded-3xl shadow-2xl ring-1 ring-white/10">
               <Image src={featured.poster} alt={`Cartaz: ${featured.title}`} width={1080} height={1528} sizes="384px" className="h-auto w-full transition-transform duration-500 group-hover:scale-[1.02]" priority />
@@ -69,13 +85,16 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+)}
         </div>
       </section>
 
       {/* CARROSSEL */}
-      <section className="container-page pt-10 sm:pt-14">
-        <BannerCarousel banners={BANNERS.filter((b) => b.active).sort((a, b) => a.order - b.order)} />
+      {banners.length > 0 && (
+<section className="container-page pt-10 sm:pt-14">
+        <BannerCarousel banners={banners} />
       </section>
+)}
 
       {/* RECENTES */}
       <section className="container-page py-14 sm:py-20">
@@ -97,8 +116,8 @@ export default function HomePage() {
         <div className="container-page py-14">
           <SectionHeading eyebrow="Modalidades" title="O que gosta de fazer?" description="Toque numa modalidade para ver só esses eventos." />
           <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {CATEGORIES.map((c) => {
-              const count = upcomingEvents().filter((e) => e.category === c.slug).length;
+            {categories.map((c) => {
+              const count = allUpcoming.filter((e) => e.category === c.slug).length;
               return (
                 <Link key={c.slug} href={`/eventos?categoria=${c.slug}`} className="group flex flex-col gap-3 rounded-2xl border border-ink-200/70 bg-ink-50 p-4 transition hover:-translate-y-0.5 hover:border-brand-300 hover:bg-white hover:shadow-card">
                   <span className={cn("flex size-12 items-center justify-center rounded-xl", CATEGORY_TONE[c.slug])}>
@@ -154,7 +173,8 @@ export default function HomePage() {
       </section>
 
       {/* ÚLTIMOS RESULTADOS */}
-      <section className="container-page py-14 sm:py-20">
+      {lastRace && (
+<section className="container-page py-14 sm:py-20">
         <div className="grid items-center gap-8 overflow-hidden rounded-3xl border border-ink-200/70 bg-white p-6 shadow-card sm:p-10 lg:grid-cols-[1fr_1.2fr]">
           <div>
             <p className="text-sm font-bold tracking-wide text-brand-600 uppercase">Resultados</p>
@@ -185,12 +205,13 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+)}
 
       {/* PATROCINADORES */}
       <section className="border-t border-ink-200/70 bg-white">
         <div className="container-page py-14">
           <SectionHeading className="mb-10 justify-center text-center sm:justify-center [&>div]:mx-auto" eyebrow="Quem nos apoia" title="Patrocinadores e parceiros" />
-          <SponsorsStrip sponsors={SPONSORS} />
+          <SponsorsStrip sponsors={sponsors} />
         </div>
       </section>
 
@@ -208,7 +229,7 @@ export default function HomePage() {
               <ButtonLink href="/sobre#organizadores" size="lg" className="bg-ink-900 hover:bg-ink-800"><Ticket /> Organizar um evento</ButtonLink>
             </div>
           </div>
-          <p className="relative mt-8 text-sm text-brand-100">Inscrições desde {formatKz(Math.min(...upcomingEvents().flatMap((e) => e.distances.map((d) => d.tiers[0].price))))} · Pagamento em Kwanzas</p>
+          <p className="relative mt-8 text-sm text-brand-100">{cheapest.length > 0 && <>Inscrições desde {formatKz(Math.min(...cheapest))} · </>}Pagamento em Kwanzas</p>
         </div>
       </section>
     </>

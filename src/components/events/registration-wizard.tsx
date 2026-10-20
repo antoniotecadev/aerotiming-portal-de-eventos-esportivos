@@ -2,20 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  ArrowLeft, ArrowRight, Building2, CalendarPlus, Check, CheckCircle2, Copy, CreditCard, HeartPulse, Landmark,
-  Loader2, Lock, MapPin, Shirt, Smartphone, Ticket, User as UserIcon,
+  ArrowLeft, ArrowRight, Building2, CalendarPlus, Check, CheckCircle2, CreditCard, HeartPulse, Landmark,
+  Loader2, Lock, MapPin, Shirt, Smartphone, Ticket, Upload, User as UserIcon, Wallet,
 } from "lucide-react";
 import type { PaymentMethod, SportsEvent, TShirtSize } from "@/lib/types";
-import { PROVINCES, TODAY, currentTier } from "@/lib/data";
+import { PROVINCES } from "@/lib/constants";
+import { currentTier } from "@/lib/event-utils";
 import { formatDate, formatDateShort, formatKm, formatKz, parseDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/field";
 import { WhatsAppIcon } from "@/components/layout/social-icons";
+import { FormError } from "@/components/auth/password-input";
+import { PaymentInstructions } from "@/components/payments/payment-instructions";
+import { createRegistration, type RegistrationResult } from "@/server/actions/registrations";
 
 const STEPS = [
   { id: 1, label: "Distância", Icon: Ticket },
@@ -27,10 +31,12 @@ const STEPS = [
 const SIZES: TShirtSize[] = ["XS", "S", "M", "L", "XL", "XXL"];
 const BLOOD = ["Não sei", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+// Pagamento MANUAL (D1): o atleta paga fora do site, envia o comprovativo e a organização confirma.
 const METHODS: { id: PaymentMethod; title: string; text: string; Icon: React.ComponentType<{ className?: string }>; badge?: string }[] = [
-  { id: "multicaixa-express", title: "Multicaixa Express", text: "Recebe um pedido na app e aprova. Confirmação imediata.", Icon: Smartphone, badge: "Mais rápido" },
-  { id: "referencia", title: "Referência Multicaixa", text: "Pague num ATM ou no Internet Banking com entidade e referência.", Icon: Building2 },
-  { id: "transferencia", title: "Transferência bancária", text: "Transfira para o IBAN e envie o comprovativo. Confirmação até 24h.", Icon: Landmark },
+  { id: "multicaixa-express", title: "Multicaixa Express", text: "Transfira pela app para o nosso número.", Icon: Smartphone, badge: "Mais usado" },
+  { id: "transferencia", title: "Transferência bancária", text: "Pelo Internet Banking ou pela app do seu banco, para o IBAN.", Icon: Landmark },
+  { id: "deposito", title: "Depósito bancário", text: "Ao balcão do banco, no IBAN indicado.", Icon: Building2 },
+  { id: "kwik", title: "KWiK", text: "Envie o valor pela app KWiK.", Icon: Wallet },
 ];
 
 interface Form {
@@ -52,13 +58,12 @@ interface Form {
   acceptRules: boolean;
   acceptHealth: boolean;
   method: PaymentMethod;
-  mcxPhone: string;
 }
 
 const EMPTY: Form = {
   name: "", gender: "", birthDate: "", documentType: "BI", documentNumber: "", phone: "", email: "", province: "", club: "", tshirt: "",
   emergencyName: "", emergencyPhone: "", emergencyRelation: "", bloodType: "Não sei", medical: "", acceptRules: false, acceptHealth: false,
-  method: "multicaixa-express", mcxPhone: "",
+  method: "multicaixa-express",
 };
 
 function ageOn(birth: string, on: string) {
@@ -67,31 +72,6 @@ function ageOn(birth: string, on: string) {
   let a = d.getFullYear() - b.getFullYear();
   if (d.getMonth() < b.getMonth() || (d.getMonth() === b.getMonth() && d.getDate() < b.getDate())) a--;
   return a;
-}
-
-function CopyField({ label, value }: { label: string; value: string }) {
-  const [ok, setOk] = useState(false);
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-4 py-3 shadow-sm">
-      <div>
-        <p className="text-sm text-ink-500">{label}</p>
-        <p className="tabular text-xl font-extrabold tracking-wide text-ink-900">{value}</p>
-      </div>
-      <button
-        type="button"
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(value.replace(/\s/g, ""));
-            setOk(true);
-            setTimeout(() => setOk(false), 1800);
-          } catch {}
-        }}
-        className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-ink-200 px-3 text-sm font-semibold text-ink-700 hover:bg-ink-50"
-      >
-        {ok ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />} {ok ? "Copiado" : "Copiar"}
-      </button>
-    </div>
-  );
 }
 
 function downloadIcs(event: SportsEvent) {
@@ -108,7 +88,7 @@ function downloadIcs(event: SportsEvent) {
   URL.revokeObjectURL(url);
 }
 
-export function RegistrationWizard({ event }: { event: SportsEvent }) {
+export function RegistrationWizard({ event, today }: { event: SportsEvent; today: string }) {
   const sp = useSearchParams();
   const { user, ready } = useAuth();
   const available = event.distances.filter((d) => d.totalSlots - d.slotsTaken > 0);
@@ -119,25 +99,39 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
   });
   const [form, setForm] = useState<Form>(EMPTY);
   const [errors, setErrors] = useState<Partial<Record<keyof Form | "distance", string>>>({});
-  const [paying, setPaying] = useState(false);
-  const [done, setDone] = useState<null | { code: string; bib: string; paid: boolean; reference?: string }>(null);
+  const [paying, startPaying] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [done, setDone] = useState<Extract<RegistrationResult, { ok: true }> | null>(null);
   const [prefilled, setPrefilled] = useState(false);
+  const [forMe, setForMe] = useState(true);
+
+  /** "Para outra pessoa": limpa os dados do atleta (mantém o e-mail de contacto da conta). */
+  const chooseFor = (me: boolean) => {
+    setForMe(me);
+    setErrors({});
+    if (me) setPrefilled(false); // volta a preencher com os dados da conta
+    else
+      setForm((f) => ({
+        ...f, name: "", gender: "", birthDate: "", documentType: "BI", documentNumber: "", phone: "", province: "", club: "", tshirt: "",
+        emergencyName: "", emergencyPhone: "", emergencyRelation: "", bloodType: "Não sei", medical: "",
+      }));
+  };
 
   // Preenche automaticamente com os dados da conta
   useEffect(() => {
     if (!ready || !user || prefilled) return;
     setForm((f) => ({
       ...f,
-      name: user.name, gender: user.gender, birthDate: user.birthDate, documentType: user.documentType, documentNumber: user.documentNumber,
-      phone: user.phone, email: user.email, province: user.province, club: user.club, tshirt: user.tshirt,
+      name: user.name, gender: user.gender ?? "", birthDate: user.birthDate, documentType: user.documentType, documentNumber: user.documentNumber,
+      phone: user.phone, email: user.email, province: user.province, club: user.club, tshirt: user.tshirt ?? "",
       emergencyName: user.emergencyContact.name.replace("—", ""), emergencyPhone: user.emergencyContact.phone.replace("—", ""),
-      emergencyRelation: user.emergencyContact.relation.replace("—", ""), bloodType: user.bloodType ?? "Não sei", mcxPhone: user.phone,
+      emergencyRelation: user.emergencyContact.relation.replace("—", ""), bloodType: user.bloodType ?? "Não sei",
     }));
     setPrefilled(true);
   }, [ready, user, prefilled]);
 
   const distance = event.distances.find((d) => d.id === distanceId);
-  const tier = distance ? currentTier(distance) : null;
+  const tier = distance ? currentTier(distance, today) : null;
   const total = tier?.price ?? 0;
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => {
@@ -165,7 +159,6 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
       if (!form.acceptRules) e.acceptRules = "Precisa de aceitar o regulamento.";
       if (!form.acceptHealth) e.acceptHealth = "Precisa de confirmar a declaração de saúde.";
     }
-    if (s === 4 && form.method === "multicaixa-express" && form.mcxPhone.replace(/\D/g, "").length < 9) e.mcxPhone = "Escreva o número associado ao Multicaixa Express.";
     setErrors(e);
     if (Object.keys(e).length) setTimeout(() => document.querySelector("[aria-invalid=true], .text-red-600")?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
     return Object.keys(e).length === 0;
@@ -183,18 +176,43 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
 
   const pay = () => {
     if (!validate(4)) return;
-    setPaying(true);
-    const n = Math.floor(10000 + Math.random() * 89999);
-    setTimeout(() => {
-      setPaying(false);
-      setDone({
-        code: `AT-2026-${n}`,
-        bib: String((event.distances.indexOf(distance!) + 1) * 1000 + 100 + (n % 800)),
-        paid: form.method === "multicaixa-express",
-        reference: form.method === "referencia" ? `${String(n).slice(0, 3)} ${String(n * 7).slice(0, 3)} ${String(n * 13).slice(0, 3)}` : undefined,
+    setServerError(null);
+    startPaying(async () => {
+      const res = await createRegistration({
+        eventSlug: event.slug,
+        distanceCode: distanceId,
+        method: form.method,
+        name: form.name,
+        gender: form.gender as "M" | "F",
+        birthDate: form.birthDate,
+        documentType: form.documentType,
+        documentNumber: form.documentNumber,
+        phone: form.phone,
+        email: form.email,
+        province: form.province,
+        club: form.club,
+        tshirt: form.tshirt as TShirtSize,
+        emergencyName: form.emergencyName,
+        emergencyPhone: form.emergencyPhone,
+        emergencyRelation: form.emergencyRelation,
+        bloodType: form.bloodType,
+        medicalNotes: form.medical,
+        acceptRules: form.acceptRules as true,
+        acceptHealth: form.acceptHealth as true,
+        saveToProfile: forMe,
       });
+      if (!res.ok) {
+        // Leva o atleta ao passo e ao campo com o problema
+        const key = res.field === "distanceCode" ? "distance" : res.field === "medicalNotes" ? "medical" : res.field;
+        if (key) setErrors({ [key]: res.error });
+        if (res.step) setStep(res.step);
+        setServerError(res.error);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      setDone(res);
       window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 1800);
+    });
   };
 
   const summary = (
@@ -224,44 +242,33 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
     return (
       <div className="container-page max-w-3xl py-10 pb-28 lg:pb-16">
         <div className="rounded-3xl border border-ink-200/70 bg-white p-6 text-center shadow-card sm:p-10">
-          <span className={cn("mx-auto flex size-20 items-center justify-center rounded-full", done.paid ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600")}>
+          <span className="mx-auto flex size-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
             <CheckCircle2 className="size-11" />
           </span>
-          <h1 className="mt-5 text-3xl font-extrabold tracking-tight">{done.paid ? "Inscrição confirmada!" : "Inscrição registada!"}</h1>
+          <h1 className="mt-5 text-3xl font-extrabold tracking-tight">Inscrição registada!</h1>
           <p className="mx-auto mt-2 max-w-lg text-lg text-ink-600">
-            {done.paid
-              ? `Parabéns, ${form.name.split(" ")[0]}! O pagamento foi aprovado. Enviámos a confirmação por SMS${form.email ? " e e-mail" : ""}.`
-              : "Falta só o pagamento. A vaga fica reservada durante 48 horas."}
+            A sua vaga está reservada, {form.name.split(" ")[0]}. <strong className="text-ink-900">Falta só pagar</strong> e enviar o comprovativo. Recebe o dorsal quando a organização confirmar o pagamento.
           </p>
 
           <div className="mt-8 grid gap-3 text-left sm:grid-cols-2">
             <div className="rounded-2xl bg-ink-50 p-4"><p className="text-sm text-ink-500">Código da inscrição</p><p className="tabular text-xl font-extrabold">{done.code}</p></div>
-            <div className="rounded-2xl bg-ink-900 p-4 text-white"><p className="text-sm text-ink-300">O seu dorsal</p><p className="font-display text-3xl leading-tight font-extrabold">{done.paid ? done.bib : "Após o pagamento"}</p></div>
+            <div className="rounded-2xl bg-ink-900 p-4 text-white"><p className="text-sm text-ink-300">O seu dorsal</p><p className="font-display text-2xl leading-tight font-extrabold">Após confirmar o pagamento</p></div>
           </div>
 
-          {!done.paid && form.method === "referencia" && (
-            <div className="mt-4 space-y-2 rounded-2xl bg-amber-50 p-4 text-left">
-              <p className="font-bold text-amber-900">Pague no ATM ou Internet Banking → Pagamentos → Pagamento de serviços</p>
-              <CopyField label="Entidade" value="11223" />
-              <CopyField label="Referência" value={done.reference!} />
-              <CopyField label="Montante" value={formatKz(total)} />
-            </div>
-          )}
-          {!done.paid && form.method === "transferencia" && (
-            <div className="mt-4 space-y-2 rounded-2xl bg-amber-50 p-4 text-left">
-              <p className="font-bold text-amber-900">Transfira e envie o comprovativo pelo WhatsApp ou na sua área pessoal</p>
-              <CopyField label="IBAN (Banco Palanca)" value="AO06 0040 0000 1234 5678 1019 0" />
-              <CopyField label="Descritivo" value={done.code} />
-            </div>
-          )}
+          <PaymentInstructions className="mt-4" method={done.method} amount={done.amount} code={done.code} accounts={done.accounts} expiresAt={done.expiresAt} />
 
-          <div className="mt-6 rounded-2xl border border-ink-200 p-4 text-left text-[15px]">
+          <div className="mt-4 flex items-start gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-left text-[15px] text-sky-900">
+            <Upload className="mt-0.5 size-5 shrink-0" />
+            <p><strong>Depois de pagar:</strong> envie a foto ou o PDF do comprovativo em <em>As minhas inscrições</em>, ou pelo WhatsApp com o código {done.code}.</p>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-ink-200 p-4 text-left text-[15px]">
             <p className="font-bold">Levantamento do kit</p>
-            <p className="mt-1 text-ink-600">{event.kit.location} — {event.kit.pickup.map((p) => formatDateShort(p.date)).join(", ")}. Leve o BI e o código da inscrição.</p>
+            <p className="mt-1 text-ink-600">{event.kit.location} — {event.kit.pickup.map((p) => formatDateShort(p.date)).join(", ")}. Leve o BI e o bilhete (está em <em>As minhas inscrições</em>).</p>
           </div>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <ButtonLink href={user ? "/perfil/inscricoes" : "/criar-conta"} size="lg"><Ticket /> {user ? "Ver o meu bilhete" : "Criar conta para guardar o bilhete"}</ButtonLink>
+            <ButtonLink href="/perfil/inscricoes" size="lg"><Ticket /> As minhas inscrições</ButtonLink>
             <Button variant="outline" size="lg" onClick={() => downloadIcs(event)}><CalendarPlus /> Adicionar ao calendário</Button>
             <Button variant="outline" size="lg" onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Inscrevi-me na ${event.title}! Junta-te a mim: ${window.location.origin}/eventos/${event.slug}`)}`, "_blank")}>
               <WhatsAppIcon className="size-5 text-[#25D366]" /> Convidar amigos
@@ -297,12 +304,7 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_360px]">
         <div className="min-w-0 rounded-3xl border border-ink-200/70 bg-white p-5 shadow-card sm:p-8">
-          {ready && !user && step <= 2 && (
-            <div className="mb-6 flex flex-col gap-3 rounded-2xl bg-sky-50 p-4 text-sky-900 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-[15px]"><strong>Já tem conta?</strong> Entre e preenchemos os seus dados automaticamente.</p>
-              <ButtonLink href={`/entrar?next=/eventos/${event.slug}/inscricao`} variant="white" size="sm">Entrar</ButtonLink>
-            </div>
-          )}
+          {serverError && <div className="mb-6"><FormError>{serverError}</FormError></div>}
 
           {step === 1 && (
             <fieldset>
@@ -326,7 +328,7 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
                         <span className="block text-sm text-ink-500">Partida {d.startTime} · {d.minAge ? `a partir dos ${d.minAge} anos` : "todas as idades"}</span>
                         <span className={cn("text-sm font-semibold", soldOut ? "text-red-600" : left < 300 ? "text-amber-700" : "text-emerald-700")}>{soldOut ? "Esgotado" : `${left} vagas disponíveis`}</span>
                       </span>
-                      <span className="text-right text-lg font-extrabold whitespace-nowrap">{formatKz(currentTier(d).price)}</span>
+                      <span className="text-right text-lg font-extrabold whitespace-nowrap">{formatKz(currentTier(d, today).price)}</span>
                     </label>
                   );
                 })}
@@ -341,6 +343,17 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
                 <h2 className="text-xl font-bold">Os dados do atleta</h2>
                 <p className="mt-1 text-ink-600">Escreva tal como está no BI ou passaporte. Vai precisar dele para levantar o kit.</p>
               </div>
+              <Field label="Para quem é esta inscrição?">
+                <div className="grid grid-cols-2 gap-2">
+                  {[{ me: true, label: "Para mim" }, { me: false, label: "Para outra pessoa" }].map((o) => (
+                    <button key={o.label} type="button" onClick={() => chooseFor(o.me)} aria-pressed={forMe === o.me} className={cn("h-12 rounded-xl border-2 font-semibold", forMe === o.me ? "border-brand-500 bg-brand-50 text-brand-800" : "border-ink-200 text-ink-700 hover:border-ink-300")}>
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+                {forMe && prefilled && <p className="text-sm text-ink-500">Preenchemos com os dados da sua conta. Confirme se estão certos.</p>}
+                {!forMe && <p className="text-sm text-ink-500">Ex.: um filho ou um amigo. Os dados dele não ficam no seu perfil.</p>}
+              </Field>
               <Field label="Nome completo" htmlFor="name" required error={errors.name}>
                 <Input id="name" autoComplete="name" value={form.name} onChange={(e) => set("name", e.target.value)} placeholder="Ex.: Maria da Conceição Neto" aria-invalid={!!errors.name} />
               </Field>
@@ -355,7 +368,7 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
                   </div>
                 </Field>
                 <Field label="Data de nascimento" htmlFor="birth" required error={errors.birthDate} hint="Usada para o escalão etário.">
-                  <Input id="birth" type="date" max={TODAY} value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} aria-invalid={!!errors.birthDate} />
+                  <Input id="birth" type="date" max={today} value={form.birthDate} onChange={(e) => set("birthDate", e.target.value)} aria-invalid={!!errors.birthDate} />
                 </Field>
               </div>
               <div className="grid gap-5 sm:grid-cols-[180px_1fr]">
@@ -464,13 +477,9 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
                   );
                 })}
               </div>
-              {form.method === "multicaixa-express" && (
-                <Field label="Número de telemóvel do Multicaixa Express" htmlFor="mcx" error={errors.mcxPhone} hint="Vai receber uma notificação na app para aprovar o pagamento.">
-                  <Input id="mcx" type="tel" inputMode="tel" value={form.mcxPhone} onChange={(e) => set("mcxPhone", e.target.value)} placeholder="923 000 000" aria-invalid={!!errors.mcxPhone} />
-                </Field>
-              )}
-              {form.method === "referencia" && <p className="rounded-xl bg-ink-50 p-4 text-[15px] text-ink-700">No próximo passo mostramos a <strong>entidade</strong> e a <strong>referência</strong>. Tem 48 horas para pagar num ATM ou no Internet Banking.</p>}
-              {form.method === "transferencia" && <p className="rounded-xl bg-ink-50 p-4 text-[15px] text-ink-700">No próximo passo mostramos o <strong>IBAN</strong>. Depois de transferir, envie o comprovativo. A confirmação pode demorar até 24 horas.</p>}
+              <p className="rounded-xl bg-ink-50 p-4 text-[15px] text-ink-700">
+                Ao confirmar, a sua vaga fica <strong>reservada</strong> e mostramos para onde pagar. Depois de pagar, envie o <strong>comprovativo</strong>: a organização confirma e recebe o dorsal.
+              </p>
               <p className="flex items-center gap-2 text-sm text-ink-500"><Lock className="size-4 text-emerald-600" /> Os seus dados estão protegidos (Lei n.º 22/11 de Protecção de Dados Pessoais).</p>
             </div>
           )}
@@ -482,7 +491,7 @@ export function RegistrationWizard({ event }: { event: SportsEvent }) {
               <Button size="lg" onClick={next} className="sm:min-w-48">Continuar <ArrowRight /></Button>
             ) : (
               <Button size="lg" onClick={pay} disabled={paying} className="sm:min-w-56">
-                {paying ? <><Loader2 className="animate-spin" /> A processar…</> : form.method === "multicaixa-express" ? <>Pagar {formatKz(total)}</> : <>Confirmar inscrição</>}
+                {paying ? <><Loader2 className="animate-spin" /> A registar…</> : <>Confirmar inscrição</>}
               </Button>
             )}
           </div>

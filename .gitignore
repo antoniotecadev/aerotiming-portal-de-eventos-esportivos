@@ -10,3 +10,9 @@ coverage/
 !.env.example
 next-env.d.ts
 *.tsbuildinfo
+.vercel
+
+/src/generated/prisma
+
+# Cliente Prisma gerado (prisma generate)
+/src/generated/

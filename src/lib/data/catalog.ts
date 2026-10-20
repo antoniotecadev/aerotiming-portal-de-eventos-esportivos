@@ -9,12 +9,7 @@ export const CATEGORIES: Category[] = [
   { slug: "triatlo", name: "Triatlo", description: "Natação, ciclismo e corrida numa só prova." },
 ];
 
-// 21 províncias (divisão político-administrativa em vigor desde 2025)
-export const PROVINCES = [
-  "Bengo", "Benguela", "Bié", "Cabinda", "Cuando", "Cuanza Norte", "Cuanza Sul", "Cubango",
-  "Cunene", "Huambo", "Huíla", "Icolo e Bengo", "Luanda", "Lunda Norte", "Lunda Sul", "Malanje",
-  "Moxico", "Moxico Leste", "Namibe", "Uíge", "Zaire",
-];
+export { PROVINCES } from "../constants";
 
 export const SPONSORS: Sponsor[] = [
   { id: "sp-1", name: "Banco Palanca", logo: "/images/patrocinadores/banco-palanca.svg", url: "#", tier: "principal", active: true },

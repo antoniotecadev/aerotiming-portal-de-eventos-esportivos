@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { ArrowLeft, CalendarDays, Info, MapPin } from "lucide-react";
-import { getCategory, getEvent, hasResults, participantsOf, pastEvents, resultsOf } from "@/lib/data";
+import { getEventBySlug } from "@/server/queries/events";
+import { listResults } from "@/server/queries/results";
+import { listPublicParticipants } from "@/server/queries/registrations";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ButtonLink } from "@/components/ui/button";
@@ -11,15 +13,9 @@ import { PosterViewer } from "@/components/events/poster-lightbox";
 import { CATEGORY_TONE, CategoryIcon } from "@/components/events/category-icon";
 import { EventResults, type ResultsEventInfo } from "@/components/results/event-results";
 
-export function generateStaticParams() {
-  return pastEvents()
-    .filter((e) => hasResults(e.slug))
-    .map((e) => ({ slug: e.slug }));
-}
-
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const event = getEvent(slug);
+  const event = await getEventBySlug(slug);
   if (!event) return { title: "Resultados não encontrados" };
   return {
     title: `Resultados · ${event.title}`,
@@ -29,10 +25,10 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function EventResultsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const event = getEvent(slug);
-  if (!event || !hasResults(slug)) notFound();
-
-  const cat = getCategory(event.category);
+  const event = await getEventBySlug(slug);
+  if (!event || !event.resultsPublished) notFound();
+  const [results, participants] = await Promise.all([listResults(slug), listPublicParticipants(slug)]);
+  if (results.length === 0) notFound();
   const info: ResultsEventInfo = {
     slug: event.slug,
     title: event.title,
@@ -53,7 +49,7 @@ export default async function EventResultsPage({ params }: { params: Promise<{ s
             <PosterViewer src={event.poster} alt={event.title} className="aspect-[1080/1300] w-24 shrink-0 rounded-xl bg-ink-800 shadow-lift sm:w-36" sizes="144px" />
             <div className="min-w-0">
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", CATEGORY_TONE[event.category])}>
-                <CategoryIcon slug={event.category} className="size-3.5" /> {cat.name}
+                <CategoryIcon slug={event.category} className="size-3.5" /> {event.categoryName ?? event.category}
               </span>
               <p className="mt-2 text-sm font-bold tracking-wide text-sun-400 uppercase">Resultados oficiais</p>
               <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-4xl">{event.title}</h1>
@@ -70,7 +66,7 @@ export default async function EventResultsPage({ params }: { params: Promise<{ s
       </section>
       <div className="container-page py-8 sm:py-10">
         <Suspense fallback={<p className="py-10 text-center text-ink-500">A carregar resultados…</p>}>
-          <EventResults event={info} results={resultsOf(slug)} participants={participantsOf(slug)} />
+          <EventResults event={info} results={results} participants={participants} />
         </Suspense>
       </div>
     </>

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Ticket } from "lucide-react";
-import { EVENTS, getEvent, isOpen, participantsOf } from "@/lib/data";
+import { isOpen } from "@/lib/event-utils";
+import { getEventBySlug } from "@/server/queries/events";
+import { listPublicParticipants } from "@/server/queries/registrations";
 import { formatDate } from "@/lib/format";
 import { PageHeader } from "@/components/ui/section-heading";
 import { ButtonLink } from "@/components/ui/button";
@@ -10,20 +12,16 @@ import { ParticipantsTable } from "@/components/events/participants-table";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return EVENTS.map((e) => ({ slug: e.slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const e = getEvent((await params).slug);
+  const e = await getEventBySlug((await params).slug);
   return e ? { title: `Inscritos · ${e.title}` } : {};
 }
 
 export default async function ParticipantsPage({ params }: Props) {
   const { slug } = await params;
-  const event = getEvent(slug);
+  const event = await getEventBySlug(slug);
   if (!event) notFound();
-  const participants = participantsOf(slug);
+  const participants = await listPublicParticipants(slug);
 
   return (
     <>

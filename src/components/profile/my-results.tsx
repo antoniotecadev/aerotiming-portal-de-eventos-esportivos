@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { CalendarDays, ChevronRight, Gauge, Medal, Timer, Trophy } from "lucide-react";
-import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { RESULT_STATUS, formatDate, formatKm } from "@/lib/format";
-import { type ResultWithEvent, resultsOf, toSeconds } from "./profile-data";
+import { type ResultWithEvent, toSeconds } from "./profile-data";
 
 function Stat({ label, value, Icon }: { label: string; value: React.ReactNode; Icon: React.ComponentType<{ className?: string }> }) {
   return (
@@ -21,10 +20,7 @@ function Stat({ label, value, Icon }: { label: string; value: React.ReactNode; I
   );
 }
 
-export function MyResults() {
-  const { user } = useAuth();
-  if (!user) return null;
-  const results = resultsOf(user);
+export function MyResults({ results }: { results: ResultWithEvent[] }) {
 
   if (results.length === 0)
     return (

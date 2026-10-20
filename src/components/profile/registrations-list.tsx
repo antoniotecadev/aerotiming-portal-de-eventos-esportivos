@@ -2,31 +2,33 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarDays, CreditCard, Hash, MapPin, QrCode, Route, Ticket, XCircle } from "lucide-react";
-import { useAuth } from "@/components/auth/auth-provider";
+import { WhatsAppIcon, WHATSAPP_NUMBER } from "@/components/layout/social-icons";
+import { PaymentInstructions } from "@/components/payments/payment-instructions";
+import { cancelRegistration } from "@/server/actions/registrations";
 import { Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { PAYMENT_METHOD, REGISTRATION_STATUS, daysUntil, formatDate, formatDateTime, formatKz } from "@/lib/format";
-import { TODAY } from "@/lib/data";
-import type { RegistrationStatus } from "@/lib/types";
-import { PaymentBox } from "./payment-box";
+import { PAYMENT_METHOD, PAYMENT_STATE, REGISTRATION_STATUS, daysUntil, formatDate, formatDateTime, formatKz } from "@/lib/format";
 import { TicketModal } from "./ticket-modal";
-import { type RegistrationWithEvent, registrationsOf } from "./profile-data";
+import { type RegistrationWithEvent, isActive } from "./profile-data";
 
 type Filter = "proximas" | "passadas" | "todas";
 
 function RegistrationCard({
   reg,
+  today: TODAY,
   onTicket,
   onPay,
   onCancel,
 }: {
   reg: RegistrationWithEvent;
+  today: string;
   onTicket: () => void;
   onPay: () => void;
   onCancel: () => void;
@@ -41,7 +43,7 @@ function RegistrationCard({
     <article className="flex flex-col overflow-hidden rounded-2xl border border-ink-200/70 bg-white shadow-card sm:flex-row">
       <Link href={href} className="relative h-40 shrink-0 bg-ink-100 sm:h-auto sm:w-40" aria-label={`Ver evento: ${event.title}`}>
         <Image src={event.poster} alt={`Cartaz: ${event.title}`} fill sizes="(min-width: 640px) 160px, 100vw" className="object-cover" />
-        {!past && reg.status !== "cancelada" && (
+        {!past && isActive(reg) && (
           <span className="absolute top-3 left-3 rounded-lg bg-ink-900/85 px-2.5 py-1 text-xs font-bold text-white backdrop-blur">
             {days === 0 ? "É hoje!" : days === 1 ? "Amanhã" : `Faltam ${days} dias`}
           </span>
@@ -74,7 +76,7 @@ function RegistrationCard({
             <Hash className="size-4 shrink-0 text-ink-400" />
             <dt className="sr-only">Dorsal</dt>
             <dd>
-              Dorsal <strong className="tabular">{reg.bib}</strong>
+              Dorsal <strong className="tabular">{reg.bib || "após o pagamento"}</strong>
             </dd>
           </div>
           <div className="flex items-center gap-2">
@@ -88,24 +90,27 @@ function RegistrationCard({
           <CreditCard className="size-4 shrink-0 text-ink-500" />
           {reg.status === "pagamento-pendente" ? (
             <span>
-              <strong className="text-amber-800">Por pagar: {formatKz(reg.payment.amount)}</strong>
-              {reg.payment.expiresAt && <> · até {formatDateTime(reg.payment.expiresAt)}</>}
+              <Badge tone={PAYMENT_STATE[reg.payment.state].tone} className="mr-2">{PAYMENT_STATE[reg.payment.state].label}</Badge>
+              <strong className="text-ink-900">{formatKz(reg.payment.amount)}</strong> · {PAYMENT_METHOD[reg.payment.method]}
+              {reg.payment.state === "pendente" && reg.payment.expiresAt && <> · até {formatDateTime(reg.payment.expiresAt)}</>}
+              {reg.payment.state === "em-analise" && <> · a organização está a confirmar</>}
+              {reg.payment.state === "rejeitado" && reg.payment.reviewNote && <> · motivo: {reg.payment.reviewNote}</>}
             </span>
-          ) : reg.status === "cancelada" ? (
-            <span>Inscrição cancelada</span>
+          ) : reg.status === "cancelada" || reg.status === "expirada" ? (
+            <span>{reg.status === "expirada" ? "O prazo para pagar terminou e a vaga foi libertada." : "Inscrição cancelada"}</span>
           ) : (
             <span>
               Pago {formatKz(reg.payment.amount)} com {PAYMENT_METHOD[reg.payment.method]}
-              {reg.payment.paidAt && <> · {formatDateTime(reg.payment.paidAt)}</>}
+              {reg.payment.confirmedAt && <> · confirmado a {formatDateTime(reg.payment.confirmedAt)}</>}
             </span>
           )}
         </div>
 
-        {reg.status !== "cancelada" && (
+        {isActive(reg) && (
           <div className="flex flex-wrap gap-2">
             {reg.status === "pagamento-pendente" ? (
               <Button onClick={onPay}>
-                <CreditCard /> Pagar agora
+                <CreditCard /> {reg.payment.state === "em-analise" ? "Ver dados do pagamento" : "Como pagar"}
               </Button>
             ) : (
               <Button variant={past ? "outline" : "dark"} onClick={onTicket}>
@@ -129,20 +134,14 @@ function RegistrationCard({
   );
 }
 
-export function RegistrationsList() {
-  const { user } = useAuth();
+export function RegistrationsList({ registrations: regs, today: TODAY }: { registrations: RegistrationWithEvent[]; today: string }) {
   const toast = useToast();
-  const [overrides, setOverrides] = useState<Record<string, RegistrationStatus>>({});
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("proximas");
   const [ticket, setTicket] = useState<RegistrationWithEvent | null>(null);
   const [pay, setPay] = useState<RegistrationWithEvent | null>(null);
   const [cancel, setCancel] = useState<RegistrationWithEvent | null>(null);
-
-  const regs = useMemo(
-    () => (user ? registrationsOf(user).map((r) => (overrides[r.id] ? { ...r, status: overrides[r.id] } : r)) : []),
-    [user, overrides],
-  );
-  if (!user) return null;
+  const [cancelling, startCancel] = useTransition();
 
   if (regs.length === 0)
     return (
@@ -194,7 +193,7 @@ export function RegistrationsList() {
       ) : (
         <div className="grid gap-4">
           {shown.map((r) => (
-            <RegistrationCard key={r.id} reg={r} onTicket={() => setTicket(r)} onPay={() => setPay(r)} onCancel={() => setCancel(r)} />
+            <RegistrationCard key={r.id} reg={r} today={TODAY} onTicket={() => setTicket(r)} onPay={() => setPay(r)} onCancel={() => setCancel(r)} />
           ))}
         </div>
       )}
@@ -207,22 +206,29 @@ export function RegistrationsList() {
         title="Pagar a inscrição"
         description={pay ? `${pay.event.title} · ${pay.distance?.name ?? ""}` : undefined}
         footer={
-          <Button
-            onClick={() => {
-              setPay(null);
-              toast({ title: "Obrigado!", description: "Assim que o pagamento for recebido, enviamos um SMS de confirmação.", tone: "info" });
-            }}
-          >
-            Já paguei
-          </Button>
+          pay && (
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Olá! Envio o comprovativo da inscrição ${pay.code} (${pay.event.title}).`)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-[#25D366] px-4 font-semibold text-white hover:brightness-95"
+            >
+              <WhatsAppIcon className="size-5" /> Enviar comprovativo pelo WhatsApp
+            </a>
+          )
         }
       >
         {pay && (
-          <div className="p-5 sm:p-6">
-            <p className="mb-4 text-[15px] text-ink-700">
-              Pague com <strong>Referência Multicaixa</strong> no ATM, na app Multicaixa Express ou no Internet banking:
-            </p>
-            <PaymentBox payment={pay.payment} />
+          <div className="space-y-4 p-5 sm:p-6">
+            {pay.payment.state === "em-analise" && (
+              <p className="rounded-xl bg-sky-50 px-4 py-3 text-[15px] text-sky-900 ring-1 ring-sky-200">Já recebemos o seu comprovativo. A organização está a confirmar o pagamento.</p>
+            )}
+            {pay.accounts ? (
+              <PaymentInstructions method={pay.payment.method} amount={pay.payment.amount} code={pay.code} accounts={pay.accounts} expiresAt={pay.payment.state === "pendente" ? pay.payment.expiresAt : undefined} />
+            ) : (
+              <p className="text-[15px] text-ink-700">Valor: <strong>{formatKz(pay.payment.amount)}</strong> · Código: <strong>{pay.code}</strong></p>
+            )}
+            <p className="text-sm text-ink-500">Em breve vai poder enviar o comprovativo aqui mesmo. Por agora, envie-o pelo WhatsApp com o código da inscrição.</p>
           </div>
         )}
       </Modal>
@@ -239,11 +245,19 @@ export function RegistrationsList() {
             </Button>
             <Button
               variant="danger"
+              disabled={cancelling}
               onClick={() => {
                 if (!cancel) return;
-                setOverrides((o) => ({ ...o, [cancel.id]: "cancelada" }));
-                toast({ title: "Inscrição cancelada", description: cancel.event.title });
-                setCancel(null);
+                startCancel(async () => {
+                  const res = await cancelRegistration({ registrationId: cancel.id });
+                  if (!res.ok) {
+                    toast({ title: "Não foi possível cancelar", description: res.error, tone: "error" });
+                    return;
+                  }
+                  toast({ title: "Inscrição cancelada", description: cancel.event.title });
+                  setCancel(null);
+                  router.refresh();
+                });
               }}
             >
               <XCircle /> Sim, cancelar
@@ -254,7 +268,7 @@ export function RegistrationsList() {
         {cancel && (
           <div className="space-y-3 p-5 text-[15px] text-ink-700 sm:p-6">
             <p>
-              Vai cancelar a sua inscrição em <strong>{cancel.event.title}</strong> ({cancel.distance?.name}). O seu dorsal <strong>{cancel.bib}</strong> deixa de ser válido.
+              Vai cancelar a sua inscrição em <strong>{cancel.event.title}</strong> ({cancel.distance?.name}). {cancel.bib && <>O seu dorsal <strong>{cancel.bib}</strong> deixa de ser válido. </>}A vaga fica livre para outra pessoa.
             </p>
             {cancel.status === "confirmada" && (
               <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 ring-1 ring-amber-200">

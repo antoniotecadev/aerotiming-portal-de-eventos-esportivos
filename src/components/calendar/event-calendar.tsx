@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { CalendarDays, CalendarRange, ChevronLeft, ChevronRight, List, MapPin, RotateCcw, SearchX } from "lucide-react";
-import type { CategorySlug, SportsEvent } from "@/lib/types";
-import { CATEGORIES } from "@/lib/data";
+import type { Category, CategorySlug, SportsEvent } from "@/lib/types";
 import { dateParts, formatDate, formatDateShort, monthName, parseDate, WEEKDAYS_SHORT } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -32,7 +31,7 @@ const monthKey = (y: number, m: number) => `${y}-${pad(m + 1)}`;
 
 type View = "mes" | "lista";
 
-export function EventCalendar({ events, today }: { events: SportsEvent[]; today: string }) {
+export function EventCalendar({ events, today, categories }: { events: SportsEvent[]; today: string; categories: Category[] }) {
   const t = parseDate(today);
   const [year, setYear] = useState(t.getFullYear());
   const [month, setMonth] = useState(t.getMonth());
@@ -114,7 +113,7 @@ export function EventCalendar({ events, today }: { events: SportsEvent[]; today:
           <p className="mb-2 text-sm font-semibold text-ink-800">Que tipo de prova procura?</p>
           <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
             <CategoryChip active={!category} onClick={() => setCategory("")} slug="todas" label="Todas" />
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <CategoryChip key={c.slug} active={category === c.slug} onClick={() => setCategory(c.slug)} slug={c.slug} label={c.name} />
             ))}
           </div>
@@ -250,7 +249,7 @@ export function EventCalendar({ events, today }: { events: SportsEvent[]; today:
               <li className="flex items-center gap-2">
                 <span className="flex size-5 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">{t.getDate()}</span> Hoje
               </li>
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <li key={c.slug} className="flex items-center gap-1.5">
                   <span className={cn("size-2.5 rounded-full", CATEGORY_DOT[c.slug])} /> {c.name}
                 </li>

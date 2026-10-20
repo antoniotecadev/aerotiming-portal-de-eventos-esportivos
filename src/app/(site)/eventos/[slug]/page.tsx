@@ -6,7 +6,10 @@ import {
   AlertCircle, CalendarDays, CalendarClock, Check, ChevronRight, Clock, Download, ExternalLink, FileText, Gift, Mail,
   MapPin, Navigation, Phone, ShieldCheck, Ticket, Trophy, Users,
 } from "lucide-react";
-import { EVENTS, TODAY, currentTier, getCategory, getEvent, getSponsor, hasResults, isOpen, minPrice, participantsOf } from "@/lib/data";
+import { currentTier, isOpen, minPrice } from "@/lib/event-utils";
+import { today } from "@/lib/today";
+import { getEventBySlug } from "@/server/queries/events";
+import { listPublicParticipants } from "@/server/queries/registrations";
 import { PAYMENT_STATUS, daysUntil, formatDate, formatDateShort, formatKm, formatKz, weekday } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge, StatusBadge } from "@/components/ui/badge";
@@ -16,16 +19,13 @@ import { PosterViewer } from "@/components/events/poster-lightbox";
 import { RouteViewer } from "@/components/events/route-viewer";
 import { SectionNav } from "@/components/events/section-nav";
 import { ShareButtons } from "@/components/events/share-buttons";
+import { AlertButton } from "@/components/events/alert-button";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return EVENTS.map((e) => ({ slug: e.slug }));
-}
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const e = getEvent(slug);
+  const e = await getEventBySlug(slug);
   if (!e) return {};
   return {
     title: e.title,
@@ -51,16 +51,16 @@ function Section({ id, title, icon, children, action }: { id: string; title: str
 
 export default async function EventPage({ params }: Props) {
   const { slug } = await params;
-  const event = getEvent(slug);
+  const event = await getEventBySlug(slug);
   if (!event) notFound();
 
-  const cat = getCategory(event.category);
+  const TODAY = today();
   const open = isOpen(event);
   const finished = event.status === "terminado";
   const days = daysUntil(event.date, TODAY);
-  const participants = participantsOf(event.slug);
+  const participants = await listPublicParticipants(event.slug);
   const confirmed = participants.filter((p) => p.paymentStatus === "confirmado").length;
-  const sponsors = event.sponsorIds.map(getSponsor).filter(Boolean);
+  const sponsors = event.sponsors ?? [];
   const href = `/eventos/${event.slug}`;
   const regHref = `${href}/inscricao`;
 
@@ -85,10 +85,10 @@ export default async function EventPage({ params }: Props) {
   const CTA = ({ className }: { className?: string }) =>
     open ? (
       <ButtonLink href={regHref} size="lg" className={className}><Ticket /> Inscrever-me agora</ButtonLink>
-    ) : finished && hasResults(event.slug) ? (
+    ) : finished && event.resultsPublished ? (
       <ButtonLink href={`/resultados/${event.slug}`} size="lg" variant="dark" className={className}><Trophy /> Ver resultados</ButtonLink>
     ) : event.status === "brevemente" ? (
-      <ButtonLink href={`/criar-conta?alerta=${event.slug}`} size="lg" variant="dark" className={className}>Avisem-me quando abrir</ButtonLink>
+      <AlertButton eventSlug={event.slug} className={className} />
     ) : (
       <span className={cn("inline-flex h-13 items-center justify-center rounded-xl bg-ink-100 px-6 font-bold text-ink-500", className)}>Inscrições encerradas</span>
     );
@@ -118,7 +118,7 @@ export default async function EventPage({ params }: Props) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={event.status} />
                 <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold", CATEGORY_TONE[event.category])}>
-                  <CategoryIcon slug={event.category} className="size-3.5" /> {cat.name}
+                  <CategoryIcon slug={event.category} className="size-3.5" /> {event.categoryName ?? event.category}
                 </span>
                 <Badge>{event.edition}.ª edição</Badge>
               </div>
@@ -145,7 +145,7 @@ export default async function EventPage({ params }: Props) {
                   {event.distances.map((d) => (
                     <span key={d.id} className="inline-flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-3 py-2 text-[15px]">
                       <strong>{formatKm(d.distanceKm)}</strong>
-                      {!finished && <span className="text-ink-500">{formatKz(currentTier(d).price)}</span>}
+                      {!finished && <span className="text-ink-500">{formatKz(currentTier(d, TODAY).price)}</span>}
                     </span>
                   ))}
                 </div>
@@ -191,7 +191,7 @@ export default async function EventPage({ params }: Props) {
           <Section id="precos" title="Distâncias e preços" icon={<Ticket />}>
             <div className="grid gap-4 md:grid-cols-2">
               {event.distances.map((d) => {
-                const tier = currentTier(d);
+                const tier = currentTier(d, TODAY);
                 const left = d.totalSlots - d.slotsTaken;
                 const pct = Math.round((d.slotsTaken / d.totalSlots) * 100);
                 return (
@@ -346,8 +346,8 @@ export default async function EventPage({ params }: Props) {
               <p className="mb-4 text-center text-xs font-bold tracking-widest text-ink-500 uppercase">Patrocinadores deste evento</p>
               <ul className="flex flex-wrap items-center justify-center gap-3">
                 {sponsors.map((s) => (
-                  <li key={s!.id} className="flex h-16 w-40 items-center justify-center rounded-xl border border-ink-100 px-3">
-                    <Image src={s!.logo} alt={s!.name} width={240} height={80} unoptimized className="h-auto w-full" />
+                  <li key={s.id} className="flex h-16 w-40 items-center justify-center rounded-xl border border-ink-100 px-3">
+                    <Image src={s.logo} alt={s.name} width={240} height={80} unoptimized className="h-auto w-full" />
                   </li>
                 ))}
               </ul>
@@ -361,7 +361,7 @@ export default async function EventPage({ params }: Props) {
             {!finished && (
               <div>
                 <p className="text-sm text-ink-500">Inscrição desde</p>
-                <p className="text-3xl font-extrabold">{formatKz(minPrice(event))}</p>
+                <p className="text-3xl font-extrabold">{formatKz(minPrice(event, TODAY))}</p>
               </div>
             )}
             <ul className="space-y-2 text-[15px] text-ink-700">
@@ -377,12 +377,12 @@ export default async function EventPage({ params }: Props) {
 
       {/* Barra de inscrição fixa (telemóvel) — fica acima da barra de navegação */}
       {(open || finished) && (
-        <div className="fixed inset-x-0 bottom-[68px] z-30 border-t border-ink-200 bg-white/95 p-3 backdrop-blur lg:hidden">
+        <div data-sticky-cta className="fixed inset-x-0 bottom-[68px] z-30 border-t border-ink-200 bg-white/95 p-3 backdrop-blur lg:hidden">
           <div className="flex items-center gap-3">
             {!finished && (
               <div className="shrink-0">
                 <p className="text-xs text-ink-500">Desde</p>
-                <p className="text-lg leading-tight font-extrabold">{formatKz(minPrice(event))}</p>
+                <p className="text-lg leading-tight font-extrabold">{formatKz(minPrice(event, TODAY))}</p>
               </div>
             )}
             <CTA className="h-12 flex-1" />

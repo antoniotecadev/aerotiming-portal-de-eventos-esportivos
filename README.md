@@ -57,6 +57,8 @@ public/images/   fotos, cartazes, logótipos de patrocinadores (fictícios)
 
 ## Ligar ao backend (próximo passo)
 
+> 📋 O plano passo a passo, com a lista de tarefas e o progresso, está em **[GUIA_MIGRACAO.md](GUIA_MIGRACAO.md)**.
+
 - As páginas públicas leem os dados através das funções de `src/lib/data/index.ts` (`getEvent`, `upcomingEvents`, `resultsOf`…). Substitua-as por chamadas à API mantendo os tipos de `src/lib/types.ts`.
 - A autenticação está em `src/components/auth/auth-provider.tsx` (trocar por sessão real).
 - O admin usa um store local (`src/components/admin/admin-store.tsx`, persistido em `localStorage`). As alterações feitas no admin **não** aparecem no site público até existir backend.

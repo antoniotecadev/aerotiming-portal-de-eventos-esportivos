@@ -8,11 +8,10 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TODAY } from "@/lib/data";
 import { daysUntil, formatDate, formatDateTime, formatKz } from "@/lib/format";
-import { PaymentBox } from "./payment-box";
+import { PaymentInstructions } from "@/components/payments/payment-instructions";
 import { TicketModal } from "./ticket-modal";
-import { isUpcoming, registrationsOf, resultsOf } from "./profile-data";
+import { type RegistrationWithEvent, type ResultWithEvent, isUpcoming } from "./profile-data";
 
 const QUICK_LINKS = [
   { href: "/perfil/inscricoes", label: "As minhas inscrições", hint: "Bilhetes e pagamentos", Icon: Ticket },
@@ -22,16 +21,15 @@ const QUICK_LINKS = [
   { href: "/ajuda", label: "Ajuda", hint: "Perguntas frequentes", Icon: HelpCircle },
 ];
 
-export function ProfileOverview() {
+export function ProfileOverview({ registrations: regs, results, today }: { registrations: RegistrationWithEvent[]; results: ResultWithEvent[]; today: string }) {
   const { user } = useAuth();
   const [ticketOpen, setTicketOpen] = useState(false);
   if (!user) return null;
 
-  const regs = registrationsOf(user);
-  const upcoming = regs.filter(isUpcoming);
+  const upcoming = regs.filter((r) => isUpcoming(r, today));
   const nextConfirmed = upcoming.find((r) => r.status === "confirmada") ?? upcoming[0];
-  const pending = upcoming.filter((r) => r.status === "pagamento-pendente");
-  const last = resultsOf(user).find((r) => r.status === "terminou");
+  const pending = upcoming.filter((r) => r.status === "pagamento-pendente" && r.payment.state === "pendente");
+  const last = results.find((r) => r.status === "terminou");
   const missingData = !user.birthDate || !user.documentNumber || !user.emergencyContact?.name;
 
   return (
@@ -46,16 +44,12 @@ export function ProfileOverview() {
                 <p className="font-bold text-amber-900">Falta pagar a sua inscrição</p>
                 <p className="text-[15px] text-amber-900/80">
                   {p.event.title} · {p.distance?.name}.{" "}
-                  {p.payment.expiresAt && (
-                    <>
-                      Pague até <strong>{formatDateTime(p.payment.expiresAt)}</strong> para não perder a vaga.
-                    </>
-                  )}
+                  Pague e envie o comprovativo em <Link href="/perfil/inscricoes" className="font-semibold underline">As minhas inscrições</Link>.
                 </p>
               </div>
             </div>
             <div className="p-5 sm:p-6">
-              <PaymentBox payment={p.payment} />
+              {p.accounts && <PaymentInstructions method={p.payment.method} amount={p.payment.amount} code={p.code} accounts={p.accounts} expiresAt={p.payment.expiresAt} />}
             </div>
           </Card>
         ))}
@@ -75,7 +69,7 @@ export function ProfileOverview() {
                   </div>
                   <div className="shrink-0 rounded-2xl bg-ink-900 px-4 py-2.5 text-center text-white">
                     {(() => {
-                      const d = daysUntil(nextConfirmed.event.date, TODAY);
+                      const d = daysUntil(nextConfirmed.event.date, today);
                       return d <= 0 ? (
                         <span className="font-display text-2xl font-extrabold">Hoje!</span>
                       ) : (
@@ -98,7 +92,7 @@ export function ProfileOverview() {
                     <MapPin className="size-4 text-ink-400" /> {nextConfirmed.event.venue}
                   </li>
                   <li className="flex items-center gap-2">
-                    <Ticket className="size-4 text-ink-400" /> {nextConfirmed.distance?.name} · Dorsal <strong>{nextConfirmed.bib}</strong>
+                    <Ticket className="size-4 text-ink-400" /> {nextConfirmed.distance?.name} · Dorsal <strong>{nextConfirmed.bib || "após o pagamento"}</strong>
                   </li>
                 </ul>
                 <div className="mt-auto flex flex-wrap gap-2">

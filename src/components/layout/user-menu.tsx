@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, LayoutDashboard, LogOut, Ticket, Trophy, User as UserIcon } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, PackageCheck, Ticket, Trophy, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Avatar } from "@/components/ui/avatar";
 import { ButtonLink } from "@/components/ui/button";
@@ -61,6 +61,7 @@ export function UserMenu() {
             { href: "/perfil/inscricoes", label: "As minhas inscrições", Icon: Ticket },
             { href: "/perfil/resultados", label: "Os meus resultados", Icon: Trophy },
             ...(user.role === "admin" || user.role === "organizador" ? [{ href: "/admin", label: "Painel de gestão", Icon: LayoutDashboard }] : []),
+            ...(user.role === "admin" || (user.staffEvents ?? 0) > 0 ? [{ href: "/checkin", label: "Check-in de kits", Icon: PackageCheck }] : []),
           ].map(({ href, label, Icon }) => (
             <Link key={href} href={href} role="menuitem" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] text-ink-700 hover:bg-ink-50 hover:text-ink-900">
               <Icon className="size-4.5 text-ink-500" />

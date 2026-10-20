@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { getCategory, getEvent, hasResults, pastEvents, RESULTS } from "@/lib/data";
+import { listEventsWithResults } from "@/server/queries/events";
+import { listCategories } from "@/server/queries/catalog";
+import { listResultIndex } from "@/server/queries/results";
 import { formatKm } from "@/lib/format";
 import { PageHeader } from "@/components/ui/section-heading";
 import { FindMyResult, ResultsDirectory, type ResultEventSummary, type ResultIndexItem } from "@/components/results/results-directory";
@@ -9,36 +11,23 @@ export const metadata: Metadata = {
   description: "Classificações oficiais das provas cronometradas pela AeroTiming. Procure o seu tempo por nome ou dorsal.",
 };
 
-export default function ResultsPage() {
-  const events: ResultEventSummary[] = pastEvents()
-    .filter((e) => hasResults(e.slug))
-    .map((e) => ({
+export default async function ResultsPage() {
+  const [withResults, categories, resultIndex] = await Promise.all([listEventsWithResults(), listCategories(), listResultIndex()]);
+  const events: ResultEventSummary[] = withResults.map(({ event: e, finishers }) => ({
       slug: e.slug,
       title: e.title,
       poster: e.poster,
       date: e.date,
       category: e.category,
-      categoryName: getCategory(e.category).name,
+      categoryName: e.categoryName ?? e.category,
       venue: e.venue,
       city: e.city,
       province: e.province,
-      finishers: RESULTS.filter((r) => r.eventSlug === e.slug && r.status === "terminou").length,
+      finishers,
       distances: e.distances.map((d) => formatKm(d.distanceKm)),
     }));
 
-  const index: ResultIndexItem[] = RESULTS.map((r) => {
-    const ev = getEvent(r.eventSlug)!;
-    return {
-      name: r.name,
-      bib: r.bib,
-      eventSlug: r.eventSlug,
-      eventTitle: ev.title,
-      distanceId: r.distanceId,
-      distanceName: ev.distances.find((d) => d.id === r.distanceId)?.name ?? r.distanceId,
-      chipTime: r.chipTime,
-      position: r.position,
-    };
-  });
+  const index: ResultIndexItem[] = resultIndex;
 
   return (
     <>
@@ -52,7 +41,7 @@ export default function ResultsPage() {
         </div>
       </PageHeader>
       <div className="container-page py-8 sm:py-10">
-        <ResultsDirectory events={events} />
+        <ResultsDirectory events={events} categories={categories} />
       </div>
     </>
   );

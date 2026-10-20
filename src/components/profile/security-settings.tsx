@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, KeyRound, LogOut, Mail, MessageSquareText, Save, Trash2, TriangleAlert } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
@@ -11,7 +11,9 @@ import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
+import { changePassword, deleteAccount, updateNotifications } from "@/server/actions/profile";
 
+// "Novas provas e promoções" ainda não tem coluna na BD: fica no browser (Fase 11).
 const PREFS_KEY = "aerotiming:notificacoes";
 type Prefs = { sms: boolean; email: boolean; whatsapp: boolean; news: boolean };
 const DEFAULT_PREFS: Prefs = { sms: true, email: true, whatsapp: false, news: false };
@@ -39,13 +41,15 @@ export function SecuritySettings() {
   const [confirm, setConfirm] = useState("");
   const [pwError, setPwError] = useState<string | null>(null);
 
-  const [prefs, setPrefs] = useState<Prefs>(DEFAULT_PREFS);
+  const [prefs, setPrefs] = useState<Prefs>({ ...DEFAULT_PREFS, ...user?.notifications });
   useEffect(() => {
     try {
       const raw = localStorage.getItem(PREFS_KEY);
-      if (raw) setPrefs({ ...DEFAULT_PREFS, ...JSON.parse(raw) });
+      if (raw) setPrefs((p) => ({ ...p, news: !!JSON.parse(raw).news }));
     } catch {}
   }, []);
+  const [pending, startTransition] = useTransition();
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteText, setDeleteText] = useState("");
@@ -68,14 +72,15 @@ export function SecuritySettings() {
             onSubmit={(e) => {
               e.preventDefault();
               setPwError(null);
-              if (!current) return setPwError("Escreva a palavra-passe que usa agora.");
-              if (pw.length < 6) return setPwError("A nova palavra-passe precisa de ter pelo menos 6 caracteres.");
-              if (pw === current) return setPwError("A nova palavra-passe tem de ser diferente da actual.");
               if (pw !== confirm) return setPwError("As duas novas palavras-passe não são iguais.");
-              setCurrent("");
-              setPw("");
-              setConfirm("");
-              toast({ title: "Palavra-passe alterada", description: "Use a nova palavra-passe da próxima vez que entrar." });
+              startTransition(async () => {
+                const res = await changePassword({ current, password: pw });
+                if (!res.ok) return setPwError(res.error);
+                setCurrent("");
+                setPw("");
+                setConfirm("");
+                toast({ title: "Palavra-passe alterada", description: "Use a nova palavra-passe da próxima vez que entrar." });
+              });
             }}
           >
             <FormError>{pwError}</FormError>
@@ -92,8 +97,8 @@ export function SecuritySettings() {
             <Field label="Repita a nova palavra-passe" htmlFor="confirm-password">
               <PasswordInput id="confirm-password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
             </Field>
-            <Button type="submit" className="w-full sm:w-auto">
-              <Save /> Guardar nova palavra-passe
+            <Button type="submit" className="w-full sm:w-auto" disabled={pending}>
+              <Save /> {pending ? "A guardar…" : "Guardar nova palavra-passe"}
             </Button>
           </form>
         </Card>
@@ -104,7 +109,7 @@ export function SecuritySettings() {
             description="Avisos de pagamento, levantamento do kit e resultados."
           />
           <div className="space-y-1 p-3 sm:p-4">
-            <Toggle icon={<MessageSquareText />} title="SMS" hint={`Para ${user.phone}`} checked={prefs.sms} onChange={(v) => setPrefs((p) => ({ ...p, sms: v }))} />
+            <Toggle icon={<MessageSquareText />} title="SMS" hint={user.phone ? `Para ${user.phone}` : "Adicione o telemóvel em “Os meus dados”"} checked={prefs.sms} onChange={(v) => setPrefs((p) => ({ ...p, sms: v }))} />
             <Toggle icon={<Mail />} title="E-mail" hint={`Para ${user.email}`} checked={prefs.email} onChange={(v) => setPrefs((p) => ({ ...p, email: v }))} />
             <Toggle icon={<WhatsAppIcon />} title="WhatsApp" hint="Mensagens rápidas no seu telemóvel" checked={prefs.whatsapp} onChange={(v) => setPrefs((p) => ({ ...p, whatsapp: v }))} />
             <div className="my-2 h-px bg-ink-100" />
@@ -117,11 +122,16 @@ export function SecuritySettings() {
             <Button
               variant="dark"
               className="w-full sm:w-auto"
+              disabled={pending}
               onClick={() => {
                 try {
-                  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+                  localStorage.setItem(PREFS_KEY, JSON.stringify({ news: prefs.news }));
                 } catch {}
-                toast({ title: "Preferências guardadas" });
+                startTransition(async () => {
+                  const res = await updateNotifications(prefs);
+                  if (!res.ok) return toast({ title: "Não foi possível guardar", description: res.error, tone: "error" });
+                  toast({ title: "Preferências guardadas" });
+                });
               }}
             >
               <Save /> Guardar preferências
@@ -138,8 +148,8 @@ export function SecuritySettings() {
           </div>
           <Button
             variant="outline"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.push("/");
             }}
           >
@@ -178,11 +188,16 @@ export function SecuritySettings() {
             </Button>
             <Button
               variant="danger"
-              disabled={deleteText.trim().toUpperCase() !== "APAGAR"}
+              disabled={deleteText.trim().toUpperCase() !== "APAGAR" || pending}
               onClick={() => {
-                logout();
-                toast({ title: "Conta apagada", description: "Lamentamos vê-lo(a) partir. Pode criar uma nova conta quando quiser." });
-                router.push("/");
+                setDeleteError(null);
+                startTransition(async () => {
+                  const res = await deleteAccount({ confirm: deleteText });
+                  if (!res.ok) return setDeleteError(res.error);
+                  toast({ title: "Conta apagada", description: "Lamentamos vê-lo(a) partir. Pode criar uma nova conta quando quiser." });
+                  await logout();
+                  router.push("/");
+                });
               }}
             >
               <Trash2 /> Apagar conta
@@ -191,6 +206,7 @@ export function SecuritySettings() {
         }
       >
         <div className="space-y-4 p-5 sm:p-6">
+          <FormError>{deleteError}</FormError>
           <p className="text-[15px] text-ink-700">
             As suas inscrições activas serão canceladas e <strong>o valor pago não é devolvido</strong>. Esta acção não pode ser desfeita.
           </p>

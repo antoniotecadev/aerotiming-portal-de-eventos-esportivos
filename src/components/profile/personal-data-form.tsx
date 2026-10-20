@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { HeartPulse, IdCard, Save, Shirt, UserRound } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { PhoneInput, isValidAoPhone, stripPrefix } from "@/components/auth/phone-input";
@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-import { PROVINCES } from "@/lib/data";
+import { PROVINCES } from "@/lib/constants";
+import { updateProfile } from "@/server/actions/profile";
 import type { Gender, TShirtSize, User } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +26,13 @@ function Form({ user }: { user: User }) {
     email: user.email,
     phone: stripPrefix(user.phone),
     birthDate: user.birthDate,
-    gender: user.gender,
+    gender: (user.gender ?? "") as Gender | "",
     documentType: user.documentType,
     documentNumber: user.documentNumber,
     province: user.province,
     city: clean(user.city),
     club: clean(user.club),
-    tshirt: user.tshirt,
+    tshirt: (user.tshirt ?? "") as TShirtSize | "",
     bloodType: user.bloodType ?? "",
     ecName: clean(user.emergencyContact?.name ?? ""),
     ecPhone: stripPrefix(clean(user.emergencyContact?.phone ?? "")),
@@ -40,34 +41,44 @@ function Form({ user }: { user: User }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
 
+  const [pending, startTransition] = useTransition();
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const err: Record<string, string> = {};
     if (f.name.trim().split(/\s+/).length < 2) err.name = "Escreva o primeiro e o último nome.";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim())) err.email = "Este e-mail não parece correcto.";
-    if (!isValidAoPhone(f.phone)) err.phone = "9 dígitos, a começar por 9.";
+    if (f.phone && !isValidAoPhone(f.phone)) err.phone = "9 dígitos, a começar por 9.";
     if (f.ecPhone && !isValidAoPhone(f.ecPhone)) err.ecPhone = "9 dígitos, a começar por 9.";
     setErrors(err);
     if (Object.keys(err).length) {
       toast({ title: "Verifique os campos assinalados", description: "Há dados por corrigir.", tone: "error" });
       return;
     }
-    updateUser({
-      name: f.name.trim().replace(/\s+/g, " "),
-      email: f.email.trim().toLowerCase(),
-      phone: `+244 ${f.phone}`,
-      birthDate: f.birthDate,
-      gender: f.gender,
-      documentType: f.documentType,
-      documentNumber: f.documentNumber.trim().toUpperCase(),
-      province: f.province,
-      city: f.city.trim(),
-      club: f.club.trim() || "Individual",
-      tshirt: f.tshirt,
-      bloodType: f.bloodType || undefined,
-      emergencyContact: { name: f.ecName.trim(), phone: f.ecPhone ? `+244 ${f.ecPhone}` : "", relation: f.ecRelation },
+    startTransition(async () => {
+      const res = await updateProfile({
+        name: f.name,
+        phone: f.phone,
+        birthDate: f.birthDate,
+        gender: f.gender,
+        documentType: f.documentType,
+        documentNumber: f.documentNumber,
+        province: f.province,
+        city: f.city,
+        club: f.club,
+        tshirt: f.tshirt,
+        bloodType: f.bloodType,
+        emergencyName: f.ecName,
+        emergencyPhone: f.ecPhone,
+        emergencyRelation: f.ecRelation,
+      });
+      if (!res.ok) {
+        if (res.field) setErrors({ [res.field === "emergencyPhone" ? "ecPhone" : res.field]: res.error });
+        toast({ title: "Não foi possível guardar", description: res.error, tone: "error" });
+        return;
+      }
+      updateUser(res.user);
+      toast({ title: "Dados guardados", description: "As suas alterações foram guardadas com sucesso." });
     });
-    toast({ title: "Dados guardados", description: "As suas alterações foram guardadas com sucesso." });
   }
 
   return (
@@ -83,23 +94,25 @@ function Form({ user }: { user: User }) {
           <Field label="Nome completo" htmlFor="name" required error={errors.name} className="sm:col-span-2" hint="Como aparece no BI. É este nome que aparece nos resultados.">
             <Input id="name" autoComplete="name" value={f.name} onChange={(e) => set("name", e.target.value)} aria-invalid={!!errors.name || undefined} />
           </Field>
-          <Field label="E-mail" htmlFor="email" required error={errors.email}>
-            <Input id="email" type="email" autoComplete="email" value={f.email} onChange={(e) => set("email", e.target.value)} aria-invalid={!!errors.email || undefined} />
+          <Field label="E-mail" htmlFor="email" hint="É o e-mail com que entra na conta. Para o mudar, fale connosco.">
+            <Input id="email" type="email" value={f.email} readOnly disabled />
           </Field>
-          <Field label="Telemóvel" htmlFor="phone" required error={errors.phone}>
+          <Field label="Telemóvel" htmlFor="phone" error={errors.phone} hint="Usado nas inscrições e em caso de urgência.">
             <PhoneInput id="phone" value={f.phone} onChange={(v) => set("phone", v)} aria-invalid={!!errors.phone || undefined} />
           </Field>
           <Field label="Data de nascimento" htmlFor="birthDate" hint="Define o seu escalão etário.">
             <Input id="birthDate" type="date" value={f.birthDate} onChange={(e) => set("birthDate", e.target.value)} />
           </Field>
           <Field label="Sexo" htmlFor="gender">
-            <Select id="gender" value={f.gender} onChange={(e) => set("gender", e.target.value as Gender)}>
+            <Select id="gender" value={f.gender} onChange={(e) => set("gender", e.target.value as Gender | "")}>
+              <option value="">Escolher…</option>
               <option value="F">Feminino</option>
               <option value="M">Masculino</option>
             </Select>
           </Field>
           <Field label="Província" htmlFor="province">
             <Select id="province" value={f.province} onChange={(e) => set("province", e.target.value)}>
+              <option value="">Escolher…</option>
               {PROVINCES.map((p) => (
                 <option key={p}>{p}</option>
               ))}
@@ -188,8 +201,8 @@ function Form({ user }: { user: User }) {
       </Card>
 
       <div className="sticky bottom-20 z-20 flex justify-end sm:bottom-4">
-        <Button type="submit" size="lg" className="w-full shadow-lift sm:w-auto">
-          <Save /> Guardar alterações
+        <Button type="submit" size="lg" className="w-full shadow-lift sm:w-auto" disabled={pending}>
+          <Save /> {pending ? "A guardar…" : "Guardar alterações"}
         </Button>
       </div>
     </form>

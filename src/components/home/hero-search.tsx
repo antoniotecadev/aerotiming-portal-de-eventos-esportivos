@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { MapPin, Search } from "lucide-react";
-import { CATEGORIES, PROVINCES } from "@/lib/data";
-import type { CategorySlug } from "@/lib/types";
+import { PROVINCES } from "@/lib/constants";
+import type { Category, CategorySlug } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CategoryIcon } from "@/components/events/category-icon";
 
-export function HeroSearch() {
+export function HeroSearch({ categories }: { categories: Category[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [provincia, setProvincia] = useState("");
@@ -60,7 +60,7 @@ export function HeroSearch() {
       <div>
         <p className="mb-2.5 text-sm font-semibold text-ink-300">Ou escolha uma modalidade:</p>
         <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button
               key={c.slug}
               onClick={() => go(c.slug)}
