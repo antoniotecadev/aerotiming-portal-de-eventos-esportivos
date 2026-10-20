@@ -1,25 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Calculator, Download, FileSpreadsheet, Globe, ListPlus, Plus, Timer, Trash2, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { CheckCircle2, Download, FileSpreadsheet, Globe, ListPlus, Plus, Timer, Trash2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 import { RESULT_STATUS, formatDate } from "@/lib/format";
-import type { Gender, RaceResult, ResultStatus } from "@/lib/types";
+import type { RaceResult, ResultStatus } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { importResults, previewResultsImport, type ImportPreview } from "@/server/actions/results";
 import { downloadFile, normalize, toCsv, uid, useAdmin } from "./admin-store";
 import { ConfirmModal, FilterSelect, PageTitle, SearchInput, TableWrap, Toggle, td, th } from "./admin-ui";
 
 const TIME_RE = /^\d{1,2}:\d{2}:\d{2}$/;
-
-const toSec = (t: string | null) => {
-  if (!t || !TIME_RE.test(t)) return null;
-  const [h, m, s] = t.split(":").map(Number);
-  return h * 3600 + m * 60 + s;
-};
 
 function normTime(v: string): string | null {
   const t = v.trim();
@@ -29,158 +25,14 @@ function normTime(v: string): string | null {
   return null;
 }
 
-/** Recalcula posições (geral, sexo, escalão) e ritmo de uma lista de resultados de uma distância. */
-export function recompute(list: RaceResult[], km: number): RaceResult[] {
-  const finishers = list
-    .filter((r) => r.status === "terminou" && toSec(r.chipTime ?? r.gunTime) !== null)
-    .sort((a, b) => toSec(a.chipTime ?? a.gunTime)! - toSec(b.chipTime ?? b.gunTime)!);
-  const pos = new Map<string, { p: number; g: number; a: number }>();
-  const byG: Record<string, number> = {};
-  const byA: Record<string, number> = {};
-  finishers.forEach((r, i) => {
-    byG[r.gender] = (byG[r.gender] ?? 0) + 1;
-    const ak = `${r.gender}|${r.ageGroup}`;
-    byA[ak] = (byA[ak] ?? 0) + 1;
-    pos.set(r.id, { p: i + 1, g: byG[r.gender], a: byA[ak] });
-  });
-  return list
-    .map((r) => {
-      const x = pos.get(r.id);
-      const sec = toSec(r.chipTime ?? r.gunTime);
-      let pace: string | null = null;
-      if (x && sec && km > 0) {
-        const p = sec / km;
-        pace = `${Math.floor(p / 60)}:${String(Math.round(p % 60)).padStart(2, "0")}`;
-      }
-      return { ...r, position: x?.p ?? null, positionGender: x?.g ?? null, positionAgeGroup: x?.a ?? null, pace };
-    })
-    .sort((a, b) => (a.position ?? 1e9) - (b.position ?? 1e9) || a.bib.localeCompare(b.bib, undefined, { numeric: true }));
-}
-
-/* ---------- CSV ---------- */
-
-function parseCsv(text: string): string[][] {
-  const clean = text.replace(/^﻿/, "");
-  const firstLine = clean.split(/\r?\n/)[0] ?? "";
-  const sep = (firstLine.match(/;/g)?.length ?? 0) > (firstLine.match(/,/g)?.length ?? 0) ? ";" : ",";
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let cell = "";
-  let quoted = false;
-  for (let i = 0; i < clean.length; i++) {
-    const c = clean[i];
-    if (quoted) {
-      if (c === '"' && clean[i + 1] === '"') {
-        cell += '"';
-        i++;
-      } else if (c === '"') quoted = false;
-      else cell += c;
-    } else if (c === '"') quoted = true;
-    else if (c === sep) {
-      row.push(cell);
-      cell = "";
-    } else if (c === "\n" || c === "\r") {
-      if (c === "\r" && clean[i + 1] === "\n") i++;
-      row.push(cell);
-      rows.push(row);
-      row = [];
-      cell = "";
-    } else cell += c;
-  }
-  if (cell || row.length) {
-    row.push(cell);
-    rows.push(row);
-  }
-  return rows.filter((r) => r.some((c) => c.trim()));
-}
-
-const STATUS_ALIASES: Record<string, ResultStatus> = {
-  terminou: "terminou",
-  finished: "terminou",
-  ok: "terminou",
-  fin: "terminou",
-  desistiu: "desistiu",
-  dnf: "desistiu",
-  desclassificado: "desclassificado",
-  dsq: "desclassificado",
-  dq: "desclassificado",
-  "nao-partiu": "nao-partiu",
-  "nao partiu": "nao-partiu",
-  dns: "nao-partiu",
-};
-
-interface ImportPreview {
-  rows: RaceResult[];
-  errors: string[];
-  fileName: string;
-}
-
-function rowsToResults(table: string[][], eventSlug: string, distanceId: string): { rows: RaceResult[]; errors: string[] } {
-  const errors: string[] = [];
-  if (table.length < 2) return { rows: [], errors: ["O ficheiro não tem linhas de dados."] };
-  const header = table[0].map((h) => normalize(h.trim()).replace(/[\s_-]/g, ""));
-  const col = (name: string) => header.indexOf(name.toLowerCase());
-  const idx = {
-    bib: col("bib"),
-    name: col("name"),
-    gender: col("gender"),
-    ageGroup: col("agegroup"),
-    club: col("club"),
-    chipTime: col("chiptime"),
-    gunTime: col("guntime"),
-    status: col("status"),
-    nationality: col("nationality"),
-  };
-  if (idx.bib < 0 || idx.name < 0) return { rows: [], errors: ["Cabeçalho inválido: são obrigatórias as colunas bib e name."] };
-  const seen = new Set<string>();
-  const rows: RaceResult[] = [];
-  table.slice(1).forEach((r, i) => {
-    const line = i + 2;
-    const get = (k: keyof typeof idx) => (idx[k] >= 0 ? (r[idx[k]] ?? "").trim() : "");
-    const bib = get("bib");
-    const name = get("name");
-    if (!bib || !name) return errors.push(`Linha ${line}: falta o dorsal ou o nome.`);
-    if (seen.has(bib)) return errors.push(`Linha ${line}: dorsal #${bib} repetido.`);
-    seen.add(bib);
-    const g = get("gender").toUpperCase();
-    const gender: Gender = g.startsWith("F") ? "F" : "M";
-    const chipRaw = get("chipTime");
-    const gunRaw = get("gunTime");
-    const chipTime = normTime(chipRaw);
-    const gunTime = normTime(gunRaw);
-    if (chipRaw && !chipTime) errors.push(`Linha ${line}: tempo de chip inválido (“${chipRaw}”), use HH:MM:SS.`);
-    if (gunRaw && !gunTime) errors.push(`Linha ${line}: tempo oficial inválido (“${gunRaw}”), use HH:MM:SS.`);
-    const st = normalize(get("status"));
-    const status: ResultStatus = STATUS_ALIASES[st] ?? (chipTime || gunTime ? "terminou" : "nao-partiu");
-    rows.push({
-      id: uid("rs"),
-      eventSlug,
-      distanceId,
-      bib,
-      name,
-      gender,
-      ageGroup: get("ageGroup") || "Sénior",
-      club: get("club") || "Individual",
-      nationality: get("nationality") || "Angola",
-      position: null,
-      positionGender: null,
-      positionAgeGroup: null,
-      chipTime: status === "terminou" ? chipTime : null,
-      gunTime: status === "terminou" ? gunTime : null,
-      pace: null,
-      status,
-      splits: [],
-    });
-  });
-  return { rows, errors };
-}
-
 /* ---------- Componente ---------- */
 
 export function ResultsManager() {
   const { data, replaceWhere, update, remove, create, setResultsPublished } = useAdmin();
   const toast = useToast();
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pending, startTransition] = useTransition();
 
   const sortedEvents = useMemo(() => [...data.events].sort((a, b) => b.date.localeCompare(a.date)), [data.events]);
   const defaultEvent = useMemo(
@@ -192,7 +44,7 @@ export function ResultsManager() {
   const [distanceId, setDistanceId] = useState(event?.distances[0]?.id ?? "");
   const distance = event?.distances.find((d) => d.id === distanceId);
   const [q, setQ] = useState("");
-  const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [preview, setPreview] = useState<(ImportPreview & { fileName: string; csv: string }) | null>(null);
   const [clear, setClear] = useState(false);
 
   useEffect(() => {
@@ -214,36 +66,35 @@ export function ResultsManager() {
 
   const published = data.publishedResults.includes(eventSlug);
   const eventResultCount = data.results.filter((r) => r.eventSlug === eventSlug).length;
-  const finishers = results.filter((r) => r.status === "terminou").length;
-  const needsRecalc = results.some((r) => r.status === "terminou" && toSec(r.chipTime ?? r.gunTime) !== null && r.position === null);
 
-  function recalc(silent = false) {
-    if (!distance) return;
-    replaceWhere("results", match, recompute(results, distance.distanceKm));
-    if (!silent) toast({ title: "Classificações recalculadas", description: `${distance.name} · ${finishers} atletas classificados` });
-  }
-
+  // 10.1: o ficheiro é validado no servidor (pré-visualização) e só é gravado depois de confirmar
   function onFile(f: File) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const { rows, errors } = rowsToResults(parseCsv(String(reader.result ?? "")), eventSlug, distanceId);
-      setPreview({ rows, errors, fileName: f.name });
-    };
-    reader.readAsText(f);
+    if (!distance) return;
+    startTransition(async () => {
+      const csv = await f.text();
+      const res = await previewResultsImport({ eventSlug, distanceCode: distance.id, csv }).catch(() => null);
+      if (!res) return toast({ tone: "error", title: "Não foi possível ler o ficheiro", description: "Verifique a ligação à internet e tente de novo." });
+      if (!res.ok) return toast({ tone: "error", title: "Ficheiro recusado", description: res.error });
+      setPreview({ ...res.preview, fileName: f.name, csv });
+    });
   }
 
   function applyImport() {
     if (!preview || !distance) return;
-    replaceWhere("results", match, recompute(preview.rows, distance.distanceKm));
-    toast({ title: "Resultados importados", description: `${preview.rows.length} linhas · ${distance.name}` });
-    setPreview(null);
+    startTransition(async () => {
+      const res = await importResults({ eventSlug, distanceCode: distance.id, csv: preview.csv }).catch(() => null);
+      if (!res?.ok) return toast({ tone: "error", title: "Resultados não importados", description: res?.error ?? "Verifique a ligação à internet e tente de novo." });
+      setPreview(null);
+      toast({ title: "Resultados importados", description: res.message });
+      router.refresh();
+    });
   }
 
   function fromParticipants() {
     if (!distance) return;
     const existing = new Set(results.map((r) => r.bib));
     const add = data.participants
-      .filter((p) => p.eventSlug === eventSlug && p.distanceId === distanceId && p.paymentStatus === "confirmado" && !existing.has(p.bib))
+      .filter((p) => p.eventSlug === eventSlug && p.distanceId === distanceId && p.paymentStatus === "confirmado" && p.bib && !existing.has(p.bib))
       .map(
         (p): RaceResult => ({
           id: uid("rs"),
@@ -308,7 +159,7 @@ export function ResultsManager() {
     <>
       <PageTitle
         title="Resultados"
-        description="Importe, corrija e publique as classificações de cada prova."
+        description="Importe, corrija e publique as classificações de cada prova. As posições são recalculadas sempre que grava."
         actions={
           <Button variant="ghost" size="sm" onClick={template}>
             <Download /> Modelo CSV
@@ -364,17 +215,14 @@ export function ResultsManager() {
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <SearchInput value={q} onChange={setQ} placeholder="Pesquisar atleta ou dorsal" className="lg:w-80" />
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={!distance}>
-            <Upload /> Importar ficheiro (CSV)
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={!distance || pending}>
+            <Upload /> {pending && !preview ? "A verificar…" : "Importar ficheiro (CSV)"}
           </Button>
           <Button variant="outline" size="sm" onClick={fromParticipants} disabled={!distance}>
             <ListPlus /> A partir das inscrições
           </Button>
           <Button variant="outline" size="sm" onClick={addRow} disabled={!distance}>
             <Plus /> Linha
-          </Button>
-          <Button size="sm" variant={needsRecalc ? "primary" : "dark"} onClick={() => recalc()} disabled={results.length === 0}>
-            <Calculator /> Recalcular classificações
           </Button>
           {results.length > 0 && (
             <Button size="sm" variant="ghost" className="text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setClear(true)}>
@@ -395,17 +243,13 @@ export function ResultsManager() {
         />
       </div>
 
-      {needsRecalc && (
-        <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Há tempos alterados sem classificação. Clique em “Recalcular classificações”.</p>
-      )}
-
       {results.length === 0 ? (
         <EmptyState
           icon={<Timer />}
           title="Ainda não há resultados nesta distância"
           description="Importe o ficheiro CSV da cronometragem (colunas bib, name, gender, ageGroup, club, chipTime, gunTime, status) ou crie a lista a partir das inscrições."
           action={
-            <Button onClick={() => fileRef.current?.click()} disabled={!distance}>
+            <Button onClick={() => fileRef.current?.click()} disabled={!distance || pending}>
               <FileSpreadsheet /> Importar CSV
             </Button>
           }
@@ -437,46 +281,77 @@ export function ResultsManager() {
 
       <Modal
         open={!!preview}
-        onClose={() => setPreview(null)}
+        onClose={() => !pending && setPreview(null)}
         title="Importar resultados"
         description={preview ? `${preview.fileName} → ${distance?.name}` : undefined}
         footer={
           <>
-            <Button variant="outline" onClick={() => setPreview(null)}>
+            <Button variant="outline" onClick={() => setPreview(null)} disabled={pending}>
               Cancelar
             </Button>
-            <Button onClick={applyImport} disabled={!preview?.rows.length}>
-              Importar {preview?.rows.length ?? 0} linhas
+            <Button onClick={applyImport} disabled={!preview?.total || pending}>
+              {pending ? "A gravar…" : `Importar ${preview?.total ?? 0} linhas`}
             </Button>
           </>
         }
       >
         {preview && (
           <div className="space-y-4 p-6">
-            <div className="grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-xl bg-ink-50 p-3">
-                <p className="tabular text-2xl font-extrabold text-ink-900">{preview.rows.length}</p>
-                <p className="text-xs text-ink-500">linhas válidas</p>
-              </div>
-              <div className="rounded-xl bg-ink-50 p-3">
-                <p className="tabular text-2xl font-extrabold text-ink-900">{preview.rows.filter((r) => r.status === "terminou").length}</p>
-                <p className="text-xs text-ink-500">terminaram</p>
-              </div>
-              <div className={cn("rounded-xl p-3", preview.errors.length ? "bg-red-50" : "bg-ink-50")}>
-                <p className={cn("tabular text-2xl font-extrabold", preview.errors.length ? "text-red-700" : "text-ink-900")}>{preview.errors.length}</p>
-                <p className="text-xs text-ink-500">avisos</p>
-              </div>
+            <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+              <PreviewStat value={preview.total} label="linhas válidas" />
+              <PreviewStat value={preview.finishers} label="terminaram" />
+              <PreviewStat value={preview.linked} label="ligadas a inscrições" />
+              <PreviewStat value={preview.errors.length} label="linhas com erros" bad={preview.errors.length > 0} />
             </div>
             {preview.errors.length > 0 && (
-              <ul className="max-h-40 space-y-1 overflow-y-auto rounded-xl bg-red-50 p-3 text-sm text-red-800">
-                {preview.errors.map((e, i) => (
-                  <li key={i}>{e}</li>
+              <div>
+                <p className="mb-1 text-sm font-semibold text-red-800">Estas linhas ficam de fora:</p>
+                <ul className="max-h-36 space-y-1 overflow-y-auto rounded-xl bg-red-50 p-3 text-sm text-red-800">
+                  {preview.errors.map((e, i) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {preview.warnings.length > 0 && (
+              <ul className="max-h-28 space-y-1 overflow-y-auto rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+                {preview.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
                 ))}
               </ul>
             )}
-            {results.length > 0 && preview.rows.length > 0 && (
+            {preview.sample.length > 0 && (
+              <div className="overflow-x-auto rounded-xl border border-ink-200/70">
+                <table className="w-full text-sm">
+                  <thead className="bg-ink-50 text-left text-xs text-ink-500 uppercase">
+                    <tr>
+                      <th className="px-3 py-2">Dorsal</th>
+                      <th className="px-3 py-2">Atleta</th>
+                      <th className="px-3 py-2">Sexo / Esc.</th>
+                      <th className="px-3 py-2">Tempo</th>
+                      <th className="px-3 py-2">Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-ink-100">
+                    {preview.sample.map((r) => (
+                      <tr key={r.line}>
+                        <td className="tabular px-3 py-2 font-semibold">{r.bib}</td>
+                        <td className="px-3 py-2">
+                          {r.name} {r.linked && <CheckCircle2 className="inline size-3.5 text-emerald-600" aria-label="Ligado à inscrição" />}
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap text-ink-600">{r.gender} · {r.ageGroup}</td>
+                        <td className="tabular px-3 py-2">{r.time ?? "—"}</td>
+                        <td className="px-3 py-2 text-ink-600">{RESULT_STATUS[r.status.replace(/_/g, "-") as ResultStatus]}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {preview.total > preview.sample.length && <p className="border-t border-ink-100 px-3 py-2 text-xs text-ink-500">… e mais {preview.total - preview.sample.length} linhas.</p>}
+              </div>
+            )}
+            {preview.replacing > 0 && preview.total > 0 && (
               <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
-                Os {results.length} resultados existentes nesta distância serão substituídos. As classificações são recalculadas automaticamente.
+                Os {preview.replacing} resultados existentes em {distance?.name} serão substituídos. As classificações são calculadas automaticamente.
               </p>
             )}
           </div>
@@ -495,6 +370,15 @@ export function ResultsManager() {
         }}
       />
     </>
+  );
+}
+
+function PreviewStat({ value, label, bad }: { value: number; label: string; bad?: boolean }) {
+  return (
+    <div className={cn("rounded-xl p-3", bad ? "bg-red-50" : "bg-ink-50")}>
+      <p className={cn("tabular text-2xl font-extrabold", bad ? "text-red-700" : "text-ink-900")}>{value}</p>
+      <p className="text-xs text-ink-500">{label}</p>
+    </div>
   );
 }
 

@@ -40,7 +40,7 @@
 | 7 | Inscrições reais | ✅ Concluída (7.9 adiada — D7) |
 | 8 | Pagamentos com confirmação manual (admin / organizador) | ✅ Concluída (página Inscrições do painel passa para a BD na Fase 9) |
 | 9 | Admin real + upload de ficheiros | ✅ Concluída (9.7 adiada) |
-| 10 | Resultados reais | ⬜ Por começar |
+| 10 | Resultados reais | ✅ Concluída (10.6 fica para o futuro) |
 | 11 | Notificações (SMS / e-mail) | ⏸️ Adiada (D3) |
 | 12 | Produção: deploy, segurança e monitorização | ⬜ Por começar |
 
@@ -493,13 +493,13 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
 
 ---
 
-## Fase 10 — Resultados reais
+## Fase 10 — Resultados reais ✅
 
-- [ ] **10.1** Importação de CSV no **servidor** (Server Action): validar as colunas, mostrar a pré-visualização e só gravar após confirmação. Ligar cada resultado à inscrição pelo dorsal.
-- [ ] **10.2** Recalcular as classificações (geral, sexo, escalão) numa função única em `src/server/results.ts`.
-- [ ] **10.3** "Publicar resultados" altera `Event.resultsPublished`; as páginas públicas só mostram resultados publicados.
-- [ ] **10.4** Perfil → Resultados liga-se pelo `registrationId` (não pelo nome, como no mock).
-- [ ] **10.5** Certificado em PDF gerado no servidor (opcional; hoje é `window.print()`).
+- [x] **10.1** Importação de CSV no **servidor** (Server Action): validar as colunas, mostrar a pré-visualização e só gravar após confirmação. Ligar cada resultado à inscrição pelo dorsal. — ✅ 2026-10-20 (`previewResultsImport` + `importResults` em `src/server/actions/results.ts`: aceita `,`/`;`, cabeçalhos em inglês ou português, tempos `MM:SS`/`HH:MM:SS(.d)`; dados em falta vêm da inscrição; recusa dorsais repetidos ou já usados noutra distância; avisa dorsais sem inscrição ou inscritos noutra distância; substitui a distância numa transacção com `createMany` — 2000 linhas em ~6 s)
+- [x] **10.2** Recalcular as classificações (geral, sexo, escalão) numa função única em `src/server/results.ts`. — ✅ 2026-10-20 (`recomputeRankings`: uma só instrução SQL com `row_number()`; corre em cada importação e em cada edição no painel — o botão "Recalcular" deixou de ser preciso)
+- [x] **10.3** "Publicar resultados" altera `Event.resultsPublished`; as páginas públicas só mostram resultados publicados. — ✅ 2026-10-20 (já feito na Fase 9; testado)
+- [x] **10.4** Perfil → Resultados liga-se pelo `registrationId` (não pelo nome, como no mock). — ✅ 2026-10-20 (já feito na Fase 9; testado com a conta de teste)
+- [x] **10.5** Certificado em PDF gerado no servidor (opcional; hoje é `window.print()`). — ✅ 2026-10-20 (`GET /api/certificados/[id]` com `pdf-lib`, sem browser headless; A4 horizontal com tempo, posições geral/sexo/escalão, ritmo e link de verificação; só resultados publicados de quem terminou; botão "Descarregar PDF" na classificação e em Perfil → Resultados. Usa as fontes-padrão do PDF: letras fora do alfabeto latino são trocadas pela letra base)
 - [ ] **10.6** *(Futuro)* Integração directa com o sistema de cronometragem (resultados ao vivo).
 
 ---
@@ -626,3 +626,5 @@ src/
 | 2026-10-20 | — | Fase 8 concluída. Decisão D12: comprovativo pelo WhatsApp do organizador (sem upload). Página `/admin/pagamentos` (confirmar/rejeitar/"recebi o comprovativo"/CSV) e `/admin/pagamentos/contas` (contas e WhatsApp por evento ou da AeroTiming). Textos do site actualizados para pagamento manual. |
 | 2026-10-20 | — | Fase 9: painel com dados reais (eventos, inscrições, resultados, utilizadores, banners, patrocinadores, categorias, definições) via `admin-store` + `adminMutate`; uploads para o Supabase Storage (bucket `media`); organizador só vê os seus eventos e cria em rascunho; mocks movidos para `prisma/seed-data/` (5.12). Testado: lista real, edição de evento reflectida no site, banner com imagem no Storage na Home. |
 | 2026-10-20 | — | Fase 9 concluída: 9.8 caixa de mensagens do contacto (`/admin/mensagens`, promover a organizador) e 9.9 contactos/redes do site lidos de `site_settings`. Testado ponta a ponta (envio, validação, anti-robô, limite, promover, tratar/reabrir; alteração das Definições reflectida no site); dados de teste apagados. 9.7 continua adiada. |
+| 2026-10-20 | — | Fase 10: importação de resultados validada no servidor com pré-visualização (10.1), classificações recalculadas no servidor em cada gravação (10.2); 10.3 e 10.4 confirmadas. Testado ponta a ponta (CSV com erros e avisos, ligação às inscrições, edição, publicação, perfil do atleta, 2000 linhas); dados de teste apagados. Falta 10.5 (certificado PDF, opcional). |
+| 2026-10-20 | — | Fase 10 concluída: certificado de finisher em PDF gerado no servidor (10.5), `/api/certificados/[id]`. Testado: PDF de finisher, 404 para não-finisher/evento não publicado/id inexistente, nomes com letras não latinas. |

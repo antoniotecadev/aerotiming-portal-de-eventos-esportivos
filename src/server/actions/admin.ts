@@ -9,6 +9,7 @@ import type { AdminEvent, AdminParticipant, SiteSettings } from "@/components/ad
 import { getCurrentUser, hasRole } from "../auth";
 import { canManageEvent } from "../permissions";
 import { releaseSlot } from "../registrations";
+import { recomputeRankings } from "../results";
 import { confirmPayment } from "./payments";
 
 /**
@@ -125,16 +126,21 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
         const slugs = [...new Set(op.upsert.map((r) => r.eventSlug))];
         const events = await prisma.event.findMany({ where: { slug: { in: slugs } }, select: { id: true, slug: true, distances: { select: { id: true, code: true } } } });
         for (const e of events) if (!(await canManageEvent(me, e.id))) fail("Sem permissão para os resultados deste evento.");
-        if (op.removeIds.length) {
-          const owners = await prisma.result.findMany({ where: { id: { in: op.removeIds } }, select: { eventId: true }, distinct: ["eventId"] });
-          for (const o of owners) if (!(await canManageEvent(me, o.eventId))) fail("Sem permissão para os resultados deste evento.");
-        }
+        const removed = op.removeIds.length ? await prisma.result.findMany({ where: { id: { in: op.removeIds } }, select: { eventId: true, distanceId: true } }) : [];
+        for (const eventId of new Set(removed.map((o) => o.eventId))) if (!(await canManageEvent(me, eventId))) fail("Sem permissão para os resultados deste evento.");
+        // Inscrições por dorsal lidas de uma vez (para ligar cada resultado ao perfil do atleta)
+        const regs = await prisma.registration.findMany({
+          where: { OR: events.map((e) => ({ eventId: e.id, bib: { in: op.upsert.filter((r) => r.eventSlug === e.slug).map((r) => r.bib) } })) },
+          select: { id: true, eventId: true, bib: true, result: { select: { id: true } } },
+        });
+        const touched = new Set(removed.map((o) => o.distanceId));
         await prisma.$transaction(async (tx) => {
           if (op.removeIds.length) await tx.result.deleteMany({ where: { id: { in: op.removeIds } } });
           for (const r of op.upsert) {
             const ev = events.find((e) => e.slug === r.eventSlug) ?? fail("Evento desconhecido.");
             const dist = ev.distances.find((d) => d.code === r.distanceId) ?? fail("Distância desconhecida.");
-            const reg = await tx.registration.findFirst({ where: { eventId: ev.id, bib: r.bib }, select: { id: true, result: { select: { id: true } } } });
+            touched.add(dist.id);
+            const reg = regs.find((x) => x.eventId === ev.id && x.bib === r.bib);
             const data = {
               eventId: ev.id,
               distanceId: dist.id,
@@ -145,9 +151,6 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
               ageGroup: r.ageGroup,
               club: r.club || "Individual",
               nationality: r.nationality || "Angola",
-              position: r.position,
-              positionGender: r.positionGender,
-              positionAgeGroup: r.positionAgeGroup,
               chipTimeMs: hmsToMs(r.chipTime),
               gunTimeMs: hmsToMs(r.gunTime),
               status: r.status.replace(/-/g, "_") as "terminou",
@@ -155,7 +158,9 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
             };
             await tx.result.upsert({ where: { id: r.id }, create: { id: r.id, ...data }, update: data });
           }
-        });
+          // As classificações são sempre recalculadas no servidor (10.2)
+          for (const distanceId of touched) await recomputeRankings(tx, distanceId);
+        }, { timeout: 60_000, maxWait: 10_000 });
         return { ok: true };
       }
       case "results.publish": {

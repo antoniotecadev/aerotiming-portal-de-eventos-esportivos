@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, ChevronRight, Gauge, Medal, Timer, Trophy } from "lucide-react";
+import { CalendarDays, ChevronRight, Download, Gauge, Medal, Timer, Trophy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -104,9 +104,16 @@ export function MyResults({ results }: { results: ResultWithEvent[] }) {
                     <Stat label={r.ageGroup} value={`${r.positionAgeGroup}º`} Icon={Medal} />
                   </div>
                 )}
-                <Link href={`/resultados/${r.event.slug}?q=${r.bib}`} className="mt-4 inline-flex h-11 items-center gap-1 font-semibold text-brand-700 hover:underline">
-                  Ver na classificação completa <ChevronRight className="size-4" />
-                </Link>
+                <div className="mt-4 flex flex-wrap items-center gap-x-6">
+                  <Link href={`/resultados/${r.event.slug}?q=${r.bib}`} className="inline-flex h-11 items-center gap-1 font-semibold text-brand-700 hover:underline">
+                    Ver na classificação completa <ChevronRight className="size-4" />
+                  </Link>
+                  {r.status === "terminou" && (
+                    <a href={`/api/certificados/${r.id}?download=1`} download className="inline-flex h-11 items-center gap-1.5 font-semibold text-brand-700 hover:underline">
+                      <Download className="size-4" /> Certificado (PDF)
+                    </a>
+                  )}
+                </div>
               </Card>
             </li>
           ))}

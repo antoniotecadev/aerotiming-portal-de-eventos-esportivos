@@ -2,12 +2,12 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Award, ChevronDown, Clock, Download, Flag, Medal, Printer, RotateCcw, Search, SearchX, Timer, UserX, Users, X } from "lucide-react";
+import { Award, ChevronDown, Clock, Download, Flag, Medal, RotateCcw, Search, SearchX, Timer, UserX, Users, X } from "lucide-react";
 import type { Gender, Participant, RaceResult } from "@/lib/types";
 import { formatDate, formatKm, GENDER_LABEL, PAYMENT_STATUS, RESULT_STATUS } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Modal } from "@/components/ui/modal";
@@ -528,27 +528,21 @@ function CertificateModal({
       open={Boolean(r)}
       onClose={onClose}
       title="Certificado de participação"
-      description="Pode imprimir ou guardar como PDF."
+      description="Descarregue o certificado em PDF (A4), pronto a imprimir ou partilhar."
       size="lg"
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Fechar</Button>
-          <Button onClick={() => window.print()}>
-            <Printer /> Imprimir certificado
-          </Button>
+          {/* PDF gerado no servidor (10.5) — src/app/api/certificados/[id]/route.ts */}
+          <a href={r ? `/api/certificados/${r.id}?download=1` : undefined} download className={buttonClasses()}>
+            <Download /> Descarregar PDF
+          </a>
         </>
       }
     >
       {r && (
         <div className="p-4 sm:p-6">
-          {/* Só o certificado aparece na impressão */}
-          <style>{`@media print {
-  @page { size: A4 landscape; margin: 12mm; }
-  body * { visibility: hidden !important; }
-  #certificado, #certificado * { visibility: visible !important; }
-  #certificado { position: fixed; inset: 0; margin: auto; width: 100%; max-width: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-}`}</style>
-          <div id="certificado" className="relative overflow-hidden rounded-2xl border-[6px] border-double border-brand-500 bg-gradient-to-br from-white via-white to-brand-50 px-6 py-8 text-center sm:px-10 sm:py-10">
+          <div className="relative overflow-hidden rounded-2xl border-[6px] border-double border-brand-500 bg-gradient-to-br from-white via-white to-brand-50 px-6 py-8 text-center sm:px-10 sm:py-10">
             <div className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-sun-300/30" aria-hidden />
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-56 rounded-full bg-brand-200/30" aria-hidden />
             <div className="relative">
