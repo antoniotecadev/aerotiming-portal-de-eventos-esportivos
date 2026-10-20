@@ -169,10 +169,22 @@ async function seedCatalog() {
         proofDeadlineHours: 72,
       },
     },
-    { key: "contacts", value: { phone: "+244923000000", email: "geral@aerotiming.ao", whatsapp: "244923000000", address: "Talatona, Luanda — Angola" } },
+    // Contactos e redes sociais do site (painel → Definições; rodapé, Contacto, Ajuda, Sobre)
     {
-      key: "social",
-      value: { facebook: "https://facebook.com/", instagram: "https://instagram.com/", tiktok: "https://tiktok.com/", youtube: "https://youtube.com/", linkedin: "https://linkedin.com/" },
+      key: "site",
+      value: {
+        siteName: "AeroTiming",
+        tagline: "Eventos desportivos em Angola",
+        email: "geral@aerotiming.ao",
+        phone: "+244 923 000 000",
+        whatsapp: "+244 923 000 000",
+        address: "Talatona, Luanda — Angola",
+        facebook: "https://facebook.com/",
+        instagram: "https://instagram.com/",
+        tiktok: "https://tiktok.com/",
+        youtube: "https://youtube.com/",
+        linkedin: "https://linkedin.com/",
+      },
     },
   ];
   await prisma.siteSetting.createMany({ data: settings, skipDuplicates: true });

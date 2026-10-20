@@ -28,7 +28,7 @@ export function SettingsForm() {
     if (!/^\S+@\S+\.\S+$/.test(form.email)) err.email = "Indique um e-mail válido.";
     if (form.phone.replace(/\D/g, "").length < 9) err.phone = "Indique um número válido.";
     if (form.whatsapp && form.whatsapp.replace(/\D/g, "").length < 9) err.whatsapp = "Indique um número válido, com indicativo (+244).";
-    (["facebook", "instagram", "youtube", "tiktok"] as Key[]).forEach((k) => {
+    (["facebook", "instagram", "youtube", "tiktok", "linkedin"] as Key[]).forEach((k) => {
       if (form[k] && !/^https?:\/\//.test(form[k])) err[k] = "O endereço deve começar por https://";
     });
     if (form.multicaixaEntity && !/^\d{5}$/.test(form.multicaixaEntity)) err.multicaixaEntity = "A entidade tem 5 dígitos.";
@@ -67,12 +67,13 @@ export function SettingsForm() {
             {f("address", "Morada")}
           </div>
         </FormSection>
-        <FormSection title="Redes sociais">
+        <FormSection title="Redes sociais" description="Aparecem no rodapé. Deixe em branco as que não usa.">
           <div className="grid gap-5 sm:grid-cols-2">
             {f("facebook", "Facebook", { type: "url", placeholder: "https://facebook.com/…" })}
             {f("instagram", "Instagram", { type: "url", placeholder: "https://instagram.com/…" })}
             {f("youtube", "YouTube", { type: "url", placeholder: "https://youtube.com/@…" })}
             {f("tiktok", "TikTok", { type: "url", placeholder: "https://tiktok.com/@…" })}
+            {f("linkedin", "LinkedIn", { type: "url", placeholder: "https://linkedin.com/company/…" })}
           </div>
         </FormSection>
         <FormSection title="Pagamentos" description="Contas de recebimento e WhatsApp para comprovativos.">

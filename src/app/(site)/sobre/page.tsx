@@ -22,7 +22,9 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader, SectionHeading } from "@/components/ui/section-heading";
-import { WHATSAPP_NUMBER, WhatsAppIcon } from "@/components/layout/social-icons";
+import { WhatsAppIcon } from "@/components/layout/social-icons";
+import { localPhone, telHref, whatsappHref } from "@/lib/site";
+import { getSiteSettings } from "@/server/queries/site";
 
 export const metadata: Metadata = {
   title: "Sobre nós",
@@ -70,7 +72,8 @@ const BENEFITS = [
   { Icon: BarChart3, title: "Relatórios para patrocinadores", text: "Números de participação, perfil dos atletas e visibilidade das marcas." },
 ];
 
-export default function SobrePage() {
+export default async function SobrePage() {
+  const settings = await getSiteSettings();
   return (
     <>
       <PageHeader
@@ -202,7 +205,7 @@ export default function SobrePage() {
                   <Mail /> Pedir orçamento
                 </ButtonLink>
                 <ButtonLink
-                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent("Olá! Quero organizar um evento com a AeroTiming.")}`}
+                  href={whatsappHref(settings.whatsapp || settings.phone, `Olá! Quero organizar um evento com a ${settings.siteName}.`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   variant="dark"
@@ -210,8 +213,8 @@ export default function SobrePage() {
                 >
                   <WhatsAppIcon /> Falar no WhatsApp
                 </ButtonLink>
-                <ButtonLink href="tel:+244923000000" variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
-                  <Phone /> 923 000 000
+                <ButtonLink href={telHref(settings.phone)} variant="ghost" size="lg" className="text-white hover:bg-white/10 hover:text-white">
+                  <Phone /> {localPhone(settings.phone)}
                 </ButtonLink>
               </div>
             </div>

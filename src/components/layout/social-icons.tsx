@@ -1,4 +1,6 @@
 // Ícones de redes sociais (o lucide-react não inclui marcas).
+import type { SiteSettings } from "@/lib/site";
+
 type P = { className?: string };
 
 export const FacebookIcon = ({ className }: P) => (
@@ -34,12 +36,13 @@ export const LinkedInIcon = ({ className }: P) => (
   </svg>
 );
 
-export const SOCIAL_LINKS = [
-  { name: "Facebook", href: "https://facebook.com/", Icon: FacebookIcon },
-  { name: "Instagram", href: "https://instagram.com/", Icon: InstagramIcon },
-  { name: "TikTok", href: "https://tiktok.com/", Icon: TikTokIcon },
-  { name: "YouTube", href: "https://youtube.com/", Icon: YouTubeIcon },
-  { name: "LinkedIn", href: "https://linkedin.com/", Icon: LinkedInIcon },
-];
-
-export const WHATSAPP_NUMBER = "244923000000";
+/** Redes sociais preenchidas em Definições (as que ficam em branco não aparecem). */
+export function socialLinks(settings: SiteSettings) {
+  return [
+    { name: "Facebook", href: settings.facebook, Icon: FacebookIcon },
+    { name: "Instagram", href: settings.instagram, Icon: InstagramIcon },
+    { name: "TikTok", href: settings.tiktok, Icon: TikTokIcon },
+    { name: "YouTube", href: settings.youtube, Icon: YouTubeIcon },
+    { name: "LinkedIn", href: settings.linkedin, Icon: LinkedInIcon },
+  ].filter((l) => l.href);
+}

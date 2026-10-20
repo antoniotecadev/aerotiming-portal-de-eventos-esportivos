@@ -3,8 +3,8 @@ import { connection } from "next/server";
 import { prisma } from "@/lib/db";
 import { today } from "@/lib/today";
 import type { User } from "@/lib/types";
-import type { AdminData, AdminEvent, AdminParticipant, SiteSettings } from "@/components/admin/admin-types";
-import { DEFAULT_SETTINGS } from "@/components/admin/admin-types";
+import type { AdminData, AdminEvent, AdminParticipant } from "@/components/admin/admin-types";
+import { getSiteSettings } from "./site";
 import { eventDetailInclude, mapBanner, mapCategory, mapEvent, mapParticipant, mapProfile, mapResult, mapSponsor, profileInclude, publicParticipantSelect, resultInclude } from "../mappers";
 
 /**
@@ -20,7 +20,7 @@ export async function getAdminData(user: User): Promise<AdminData> {
   const eventRows = await prisma.event.findMany({ where: eventWhere, include: eventDetailInclude, orderBy: { date: "desc" } });
   const eventIds = eventRows.map((e) => e.id);
 
-  const [regRows, resultRows, users, regCounts, banners, sponsors, categories, siteSetting] = await Promise.all([
+  const [regRows, resultRows, users, regCounts, banners, sponsors, categories, settings] = await Promise.all([
     prisma.registration.findMany({
       where: { eventId: { in: eventIds } },
       select: { ...publicParticipantSelect, kitStatus: true, userId: true, payments: { orderBy: { createdAt: "desc" }, take: 1, select: { status: true } } },
@@ -32,7 +32,7 @@ export async function getAdminData(user: User): Promise<AdminData> {
     prisma.banner.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.sponsor.findMany({ orderBy: { sortOrder: "asc" } }),
     prisma.category.findMany({ orderBy: { sortOrder: "asc" } }),
-    prisma.siteSetting.findUnique({ where: { key: "site" } }),
+    getSiteSettings(),
   ]);
 
   const events: AdminEvent[] = eventRows.map((row) => ({
@@ -63,7 +63,7 @@ export async function getAdminData(user: User): Promise<AdminData> {
     banners: banners.map(mapBanner),
     sponsors: sponsors.map(mapSponsor),
     categories: categories.map(mapCategory),
-    settings: { ...DEFAULT_SETTINGS, ...((siteSetting?.value as Partial<SiteSettings> | undefined) ?? {}) },
+    settings,
     publishedResults: eventRows.filter((e) => e.resultsPublished).map((e) => e.slug),
   };
 }

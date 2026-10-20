@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Logo } from "./logo";
-import { SOCIAL_LINKS } from "./social-icons";
+import { socialLinks } from "./social-icons";
+import { formatPhone, telHref } from "@/lib/site";
 import { listCategories } from "@/server/queries/catalog";
+import { getSiteSettings } from "@/server/queries/site";
 
 const COLUMNS = [
   {
@@ -35,7 +37,7 @@ const COLUMNS = [
 ];
 
 export async function SiteFooter() {
-  const categories = await listCategories();
+  const [categories, settings] = await Promise.all([listCategories(), getSiteSettings()]);
   return (
     <footer className="bg-ink-950 text-ink-300">
       <div className="h-1.5 bg-[linear-gradient(90deg,#e23d0b_0_33%,#0e1a33_33%_66%,#ffc21a_66%)]" aria-hidden />
@@ -46,12 +48,12 @@ export async function SiteFooter() {
             A forma mais simples de encontrar, inscrever-se e acompanhar eventos desportivos em Angola. Cronometragem electrónica e resultados na hora.
           </p>
           <ul className="space-y-2.5 text-[15px]">
-            <li className="flex items-center gap-3"><Phone className="size-4 text-brand-400" /> <a href="tel:+244923000000" className="hover:text-white">+244 923 000 000</a></li>
-            <li className="flex items-center gap-3"><Mail className="size-4 text-brand-400" /> <a href="mailto:geral@aerotiming.ao" className="hover:text-white">geral@aerotiming.ao</a></li>
-            <li className="flex items-center gap-3"><MapPin className="size-4 text-brand-400" /> Talatona, Luanda — Angola</li>
+            <li className="flex items-center gap-3"><Phone className="size-4 text-brand-400" /> <a href={telHref(settings.phone)} className="hover:text-white">{formatPhone(settings.phone)}</a></li>
+            <li className="flex items-center gap-3"><Mail className="size-4 text-brand-400" /> <a href={`mailto:${settings.email}`} className="hover:text-white">{settings.email}</a></li>
+            {settings.address && <li className="flex items-center gap-3"><MapPin className="size-4 text-brand-400" /> {settings.address}</li>}
           </ul>
           <div className="flex gap-2 pt-1">
-            {SOCIAL_LINKS.map(({ name, href, Icon }) => (
+            {socialLinks(settings).map(({ name, href, Icon }) => (
               <a key={name} href={href} target="_blank" rel="noopener noreferrer" aria-label={name} className="flex size-11 items-center justify-center rounded-xl bg-white/5 text-ink-300 transition-colors hover:bg-brand-600 hover:text-white">
                 <Icon className="size-5" />
               </a>
@@ -79,7 +81,7 @@ export async function SiteFooter() {
       </div>
       <div className="border-t border-white/5">
         <div className="container-page flex flex-col gap-3 py-6 pb-28 text-sm text-ink-500 sm:flex-row sm:items-center sm:justify-between lg:pb-6">
-          <p>© {new Date().getFullYear()} AeroTiming Angola. Todos os direitos reservados.</p>
+          <p>© {new Date().getFullYear()} {settings.siteName}. Todos os direitos reservados.</p>
           <div className="flex gap-5">
             <Link href="/termos" className="hover:text-white">Termos de uso</Link>
             <Link href="/privacidade" className="hover:text-white">Privacidade</Link>

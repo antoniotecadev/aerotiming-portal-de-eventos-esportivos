@@ -8,27 +8,21 @@ import { PhoneInput, isValidAoPhone, stripPrefix } from "@/components/auth/phone
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
-
-const SUBJECTS = [
-  { id: "inscricao", label: "Dúvida sobre uma inscrição" },
-  { id: "pagamento", label: "Problema com um pagamento" },
-  { id: "resultados", label: "Correcção de resultados" },
-  { id: "organizar", label: "Quero organizar um evento" },
-  { id: "patrocinio", label: "Patrocínios e publicidade" },
-  { id: "outro", label: "Outro assunto" },
-];
+import { CONTACT_SUBJECTS as SUBJECTS } from "@/lib/contact";
+import { sendContactMessage } from "@/server/actions/contact";
 
 export function ContactForm() {
   const { user } = useAuth();
   const toast = useToast();
   const params = useSearchParams();
-  const initialSubject = SUBJECTS.some((s) => s.id === params.get("assunto")) ? params.get("assunto")! : "inscricao";
+  const initialSubject: string = SUBJECTS.some((s) => s.id === params.get("assunto")) ? params.get("assunto")! : "inscricao";
 
   const [name, setName] = useState(user?.name ?? "");
   const [email, setEmail] = useState(user?.email ?? "");
   const [phone, setPhone] = useState(user ? stripPrefix(user.phone) : "");
   const [subject, setSubject] = useState(initialSubject);
   const [message, setMessage] = useState("");
+  const [website, setWebsite] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -66,7 +60,7 @@ export function ContactForm() {
     <form
       noValidate
       className="space-y-5"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         const err: Record<string, string> = {};
         if (name.trim().length < 3) err.name = "Escreva o seu nome.";
@@ -76,13 +70,15 @@ export function ContactForm() {
         setErrors(err);
         if (Object.keys(err).length) return;
         setLoading(true);
-        setTimeout(() => {
-          setLoading(false);
-          setSent(true);
-          toast({ title: "Mensagem enviada", description: "Respondemos em menos de 1 dia útil." });
-        }, 600);
+        const res = await sendContactMessage({ name, email, phone: phone.replace(/\D/g, ""), subject, message, website }).catch(() => null);
+        setLoading(false);
+        if (!res?.ok) return toast({ tone: "error", title: "Não foi possível enviar", description: res?.error ?? "Verifique a ligação à internet e tente de novo." });
+        setSent(true);
+        toast({ title: "Mensagem enviada", description: "Respondemos em menos de 1 dia útil." });
       }}
     >
+      {/* Armadilha para robôs: escondida das pessoas e dos leitores de ecrã */}
+      <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" aria-hidden className="absolute left-[-9999px] h-0 w-0 opacity-0" />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="O seu nome" htmlFor="c-name" required error={errors.name}>
           <Input id="c-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={!!errors.name || undefined} />

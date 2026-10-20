@@ -39,7 +39,7 @@
 | 6 | Autenticação real (Supabase Auth) | ✅ Concluída (6.14 e permissões por evento ficam para a Fase 9) |
 | 7 | Inscrições reais | ✅ Concluída (7.9 adiada — D7) |
 | 8 | Pagamentos com confirmação manual (admin / organizador) | ✅ Concluída (página Inscrições do painel passa para a BD na Fase 9) |
-| 9 | Admin real + upload de ficheiros | 🟡 Quase concluída (faltam 9.8 contacto e 9.9 rodapé; 9.7 adiada) |
+| 9 | Admin real + upload de ficheiros | ✅ Concluída (9.7 adiada) |
 | 10 | Resultados reais | ⬜ Por começar |
 | 11 | Notificações (SMS / e-mail) | ⏸️ Adiada (D3) |
 | 12 | Produção: deploy, segurança e monitorização | ⬜ Por começar |
@@ -469,7 +469,7 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
 
 ---
 
-## Fase 9 — Admin real + upload de ficheiros 🟡
+## Fase 9 — Admin real + upload de ficheiros ✅
 
 - [x] **9.1** Criar *buckets* no Supabase Storage: — ✅ 2026-10-20 (um bucket público **`media`**, criado automaticamente no 1.º upload, com pastas `imagens/` e `documentos/`; comprovativos não são precisos — D12)
   - `cartazes`, `banners`, `patrocinadores` → **públicos** (só leitura)
@@ -484,12 +484,12 @@ Fica registado para quando se decidir integrar um gateway angolano (referência 
   - [x] Banners — CRUD + ordenar — ✅ 2026-10-20
   - [x] Patrocinadores — CRUD — ✅ 2026-10-20
   - [x] Categorias — editar — ✅ 2026-10-20
-  - [x] Definições — gravar em `SiteSetting`; o rodapé e os contactos passam a ler daqui — ✅ 2026-10-20 (gravam em `site_settings` → `site`). ⚠️ O rodapé e a página de contacto ainda têm os contactos escritos no código — ligar a `site_settings` (tarefa 9.9)
+  - [x] Definições — gravar em `SiteSetting`; o rodapé e os contactos passam a ler daqui — ✅ 2026-10-20 (gravam em `site_settings` → `site`; o site lê daqui desde a 9.9)
 - [x] **9.5** Painel (`dashboard.tsx`): calcular os indicadores com consultas agregadas (`groupBy`, `aggregate`). — ✅ 2026-10-20 (os indicadores são calculados a partir dos dados reais do evento/organizador; agregar no servidor só se o volume crescer)
 - [ ] ❌ **9.6** ~~Revalidar páginas públicas após alterações~~ — não é preciso: as páginas são dinâmicas (D4).
 - [ ] ⏸️ **9.7** Migrar as imagens de `public/images/` para os buckets e actualizar os URLs na BD. — adiado: as imagens de demonstração em `public/images/` continuam a funcionar; as novas já vão para o Storage.
-- [ ] **9.9** Rodapé, contactos e redes sociais do site lidos de `site_settings` (hoje estão no código).
-- [ ] **9.8** Formulário de contacto (`contact-form.tsx`) grava em `ContactMessage` e cria a caixa de mensagens no admin. Os pedidos com assunto "organizar" aparecem destacados, com o botão "Promover a organizador".
+- [x] **9.9** Rodapé, contactos e redes sociais do site lidos de `site_settings` (hoje estão no código). — ✅ 2026-10-20 (`getSiteSettings()` em `src/server/queries/site.ts`; rodapé, botão WhatsApp, Contacto, Ajuda e Sobre; redes em branco não aparecem; novo campo LinkedIn. As chaves antigas `contacts`/`social` do seed passaram para uma só chave `site`)
+- [x] **9.8** Formulário de contacto (`contact-form.tsx`) grava em `ContactMessage` e cria a caixa de mensagens no admin. Os pedidos com assunto "organizar" aparecem destacados, com o botão "Promover a organizador". — ✅ 2026-10-20 (`src/server/actions/contact.ts`: validação no servidor, campo-armadilha para robôs, máx. 3 mensagens/10 min por e-mail; página `/admin/mensagens` só para admin; "Promover" usa a conta com o mesmo e-mail e regista no `audit_logs`)
 
 ---
 
@@ -625,3 +625,4 @@ src/
 | 2026-10-20 | — | Fase 7 concluída: inscrição real (exige conta; validação e preço no servidor; vagas e códigos atómicos), "Para mim / Para outra pessoa", "As minhas inscrições" com dados reais e cancelamento, check-in de kits em `/checkin`, expiração automática (`/api/cron/expirar-inscricoes` + `CRON_SECRET`), alertas de abertura. Adiantado da Fase 8: 4 métodos manuais e instruções de pagamento (8.2, 8.3, parte da 8.9). |
 | 2026-10-20 | — | Fase 8 concluída. Decisão D12: comprovativo pelo WhatsApp do organizador (sem upload). Página `/admin/pagamentos` (confirmar/rejeitar/"recebi o comprovativo"/CSV) e `/admin/pagamentos/contas` (contas e WhatsApp por evento ou da AeroTiming). Textos do site actualizados para pagamento manual. |
 | 2026-10-20 | — | Fase 9: painel com dados reais (eventos, inscrições, resultados, utilizadores, banners, patrocinadores, categorias, definições) via `admin-store` + `adminMutate`; uploads para o Supabase Storage (bucket `media`); organizador só vê os seus eventos e cria em rascunho; mocks movidos para `prisma/seed-data/` (5.12). Testado: lista real, edição de evento reflectida no site, banner com imagem no Storage na Home. |
+| 2026-10-20 | — | Fase 9 concluída: 9.8 caixa de mensagens do contacto (`/admin/mensagens`, promover a organizador) e 9.9 contactos/redes do site lidos de `site_settings`. Testado ponta a ponta (envio, validação, anti-robô, limite, promover, tratar/reabrir; alteração das Definições reflectida no site); dados de teste apagados. 9.7 continua adiada. |

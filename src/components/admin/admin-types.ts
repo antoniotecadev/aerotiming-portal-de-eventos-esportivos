@@ -1,5 +1,8 @@
 // Tipos do painel partilhados entre o servidor (src/server/queries/admin.ts) e o cliente (admin-store.tsx).
 import type { Banner, Category, Participant, RaceResult, Registration, SportsEvent, Sponsor, User } from "@/lib/types";
+import type { SiteSettings } from "@/lib/site";
+
+export { DEFAULT_SETTINGS, type SiteSettings } from "@/lib/site";
 
 /** Evento com campos extra do painel (rascunho e ficheiros). */
 export type AdminEvent = SportsEvent & {
@@ -9,40 +12,6 @@ export type AdminEvent = SportsEvent & {
 };
 
 export type AdminParticipant = Participant & { kitPickedUp?: boolean };
-
-export interface SiteSettings {
-  siteName: string;
-  tagline: string;
-  email: string;
-  phone: string;
-  whatsapp: string;
-  address: string;
-  facebook: string;
-  instagram: string;
-  youtube: string;
-  tiktok: string;
-  multicaixaEntity: string;
-  bankName: string;
-  iban: string;
-  accountHolder: string;
-}
-
-export const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: "AeroTiming",
-  tagline: "Eventos desportivos em Angola",
-  email: "geral@aerotiming.ao",
-  phone: "+244 923 000 000",
-  whatsapp: "+244 923 000 000",
-  address: "Talatona, Luanda",
-  facebook: "https://facebook.com/aerotiming",
-  instagram: "https://instagram.com/aerotiming",
-  youtube: "",
-  tiktok: "",
-  multicaixaEntity: "",
-  bankName: "",
-  iban: "",
-  accountHolder: "",
-};
 
 export interface AdminData {
   events: AdminEvent[];

@@ -2,37 +2,43 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Clock, Mail, MapPin, Phone } from "lucide-react";
 import { ContactForm } from "@/components/info/contact-form";
-import { WHATSAPP_NUMBER, WhatsAppIcon } from "@/components/layout/social-icons";
+import { WhatsAppIcon } from "@/components/layout/social-icons";
 import { Card, CardHeader } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/section-heading";
+import { type SiteSettings, formatPhone, mapsHref, telHref, whatsappHref } from "@/lib/site";
+import { getSiteSettings } from "@/server/queries/site";
 
 export const metadata: Metadata = {
   title: "Contacto",
   description: "Fale com a AeroTiming por WhatsApp, telefone, e-mail ou visite-nos em Luanda.",
 };
 
-const CHANNELS = [
-  {
-    Icon: WhatsAppIcon,
-    title: "WhatsApp",
-    value: "+244 923 000 000",
-    hint: "A forma mais rápida",
-    href: `https://wa.me/${WHATSAPP_NUMBER}`,
-    tone: "bg-emerald-50 text-emerald-600",
-    external: true,
-  },
-  { Icon: Phone, title: "Telefone", value: "+244 923 000 000", hint: "Seg. a sex., 8h–18h", href: "tel:+244923000000", tone: "bg-brand-50 text-brand-600" },
-  { Icon: Mail, title: "E-mail", value: "geral@aerotiming.ao", hint: "Resposta em 1 dia útil", href: "mailto:geral@aerotiming.ao", tone: "bg-sky-50 text-sky-600" },
-  {
-    Icon: MapPin,
-    title: "Escritório",
-    value: "Rua Major Kanhangulo, 120",
-    hint: "Ingombota, Luanda",
-    href: "https://maps.google.com/?q=Rua+Major+Kanhangulo+Luanda",
-    tone: "bg-violet-50 text-violet-600",
-    external: true,
-  },
-];
+/** Canais de contacto a partir das Definições do painel (os que ficam em branco não aparecem). */
+function channels(s: SiteSettings) {
+  const wa = s.whatsapp || s.phone;
+  return [
+    wa && {
+      Icon: WhatsAppIcon,
+      title: "WhatsApp",
+      value: formatPhone(wa),
+      hint: "A forma mais rápida",
+      href: whatsappHref(wa),
+      tone: "bg-emerald-50 text-emerald-600",
+      external: true,
+    },
+    s.phone && { Icon: Phone, title: "Telefone", value: formatPhone(s.phone), hint: "Seg. a sex., 8h–18h", href: telHref(s.phone), tone: "bg-brand-50 text-brand-600" },
+    s.email && { Icon: Mail, title: "E-mail", value: s.email, hint: "Resposta em 1 dia útil", href: `mailto:${s.email}`, tone: "bg-sky-50 text-sky-600" },
+    s.address && {
+      Icon: MapPin,
+      title: "Escritório",
+      value: s.address,
+      hint: "Ver no mapa",
+      href: mapsHref(s.address),
+      tone: "bg-violet-50 text-violet-600",
+      external: true,
+    },
+  ].filter((c) => !!c);
+}
 
 const HOURS = [
   { day: "Segunda a sexta", time: "08:00 – 18:00" },
@@ -40,14 +46,15 @@ const HOURS = [
   { day: "Domingo e feriados", time: "Fechado*" },
 ];
 
-export default function ContactoPage() {
+export default async function ContactoPage() {
+  const settings = await getSiteSettings();
   return (
     <>
       <PageHeader eyebrow="Contacto" title="Fale connosco" description="Estamos aqui para ajudar atletas, organizadores e patrocinadores. Escolha a forma que preferir." />
 
       <section className="container-page py-10 lg:py-14">
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CHANNELS.map(({ Icon, title, value, hint, href, tone, external }) => (
+          {channels(settings).map(({ Icon, title, value, hint, href, tone, external }) => (
             <li key={title}>
               <a
                 href={href}
@@ -92,14 +99,16 @@ export default function ContactoPage() {
                 * Nos dias de prova a nossa equipa está no local do evento e o WhatsApp funciona a partir das 5h00.
               </p>
             </Card>
-            <Card className="overflow-hidden">
-              <iframe
-                title="Mapa do escritório AeroTiming em Luanda"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=13.226%2C-8.822%2C13.242%2C-8.810&layer=mapnik&marker=-8.816%2C13.234"
-                className="h-56 w-full border-0"
-                loading="lazy"
-              />
-            </Card>
+            {settings.address && (
+              <Card className="overflow-hidden">
+                <iframe
+                  title={`Mapa do escritório: ${settings.address}`}
+                  src={`https://maps.google.com/maps?q=${encodeURIComponent(settings.address)}&z=15&output=embed`}
+                  className="h-56 w-full border-0"
+                  loading="lazy"
+                />
+              </Card>
+            )}
           </div>
         </div>
       </section>

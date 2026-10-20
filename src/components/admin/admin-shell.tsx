@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Loader2,
   LogOut,
+  Mail,
   Menu,
   RotateCcw,
   Search,
@@ -41,6 +42,7 @@ const NAV = [
   { href: "/admin/resultados", label: "Resultados", icon: Timer },
   { href: "/checkin", label: "Check-in de kits", icon: PackageCheck },
   { href: "/admin/utilizadores", label: "Utilizadores", icon: Users },
+  { href: "/admin/mensagens", label: "Mensagens", icon: Mail },
   { href: "/admin/banners", label: "Banners (carrossel)", icon: GalleryHorizontalEnd },
   { href: "/admin/patrocinadores", label: "Patrocinadores", icon: Handshake },
   { href: "/admin/categorias", label: "Categorias", icon: Tags },
@@ -48,7 +50,7 @@ const NAV = [
 ];
 
 /** Áreas só para o admin; o organizador não as vê (e o servidor também as bloqueia). */
-const ADMIN_ONLY = new Set(["/admin/utilizadores", "/admin/banners", "/admin/patrocinadores", "/admin/categorias", "/admin/definicoes"]);
+const ADMIN_ONLY = new Set(["/admin/utilizadores", "/admin/mensagens", "/admin/banners", "/admin/patrocinadores", "/admin/categorias", "/admin/definicoes"]);
 
 export function AdminShell({ children, initialData }: { children: React.ReactNode; initialData: AdminData }) {
   // O acesso já foi verificado no servidor (src/app/admin/layout.tsx).
