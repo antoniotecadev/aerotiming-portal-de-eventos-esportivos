@@ -16,3 +16,6 @@ next-env.d.ts
 
 # Cliente Prisma gerado (prisma generate)
 /src/generated/
+
+# Cópias de segurança locais da base de dados (dados pessoais)
+/backups/
