@@ -137,7 +137,7 @@ export default async function SobrePage() {
           {STEPS.map(({ Icon, title, text }) => (
             <li key={title}>
               <Card className="h-full p-6">
-                <span className="flex size-14 items-center justify-center rounded-2xl bg-ink-900 text-sun-400">
+                <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-600 text-white">
                   <Icon className="size-7" />
                 </span>
                 <h3 className="mt-4 text-lg font-bold text-ink-900">{title}</h3>
@@ -159,7 +159,7 @@ export default async function SobrePage() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {VALUES.map(({ Icon, title, text }) => (
               <div key={title} className="rounded-2xl bg-white/5 p-6 ring-1 ring-white/10">
-                <Icon className="size-7 text-sun-400" />
+                <Icon className="size-7 text-brand-400" />
                 <h3 className="mt-3 text-lg font-bold">{title}</h3>
                 <p className="mt-1.5 text-[15px] text-ink-300">{text}</p>
               </div>
@@ -201,7 +201,7 @@ export default async function SobrePage() {
               <ul className="mt-3 space-y-1.5 text-brand-50">
                 {["Orçamento gratuito em 48 horas", "Sem compromisso", "Acompanhamento do início ao fim"].map((t) => (
                   <li key={t} className="flex items-center gap-2">
-                    <CheckCircle2 className="size-5 text-sun-300" /> {t}
+                    <CheckCircle2 className="size-5 text-white" /> {t}
                   </li>
                 ))}
               </ul>

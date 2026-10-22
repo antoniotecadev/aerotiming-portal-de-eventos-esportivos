@@ -27,7 +27,7 @@ function channels(s: SiteSettings) {
       external: true,
     },
     s.phone && { Icon: Phone, title: "Telefone", value: formatPhone(s.phone), hint: "Seg. a sex., 8h–18h", href: telHref(s.phone), tone: "bg-brand-50 text-brand-600" },
-    s.email && { Icon: Mail, title: "E-mail", value: s.email, hint: "Resposta em 1 dia útil", href: `mailto:${s.email}`, tone: "bg-sky-50 text-sky-600" },
+    s.email && { Icon: Mail, title: "E-mail", value: s.email, hint: "Resposta em 1 dia útil", href: `mailto:${s.email}`, tone: "bg-brand-50 text-brand-600" },
     s.address && {
       Icon: MapPin,
       title: "Escritório",

@@ -104,7 +104,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <span className="font-display text-[22px] leading-none font-extrabold tracking-tight text-white italic">
             Conexão<span className="text-brand-500">Sport</span>
           </span>
-          <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-sun-400 uppercase">Gestão</span>
+          <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-brand-400 uppercase">Gestão</span>
         </Link>
         {onClose && (
           <button onClick={onClose} className="rounded-lg p-2 text-ink-400 hover:bg-white/10 hover:text-white" aria-label="Fechar menu">

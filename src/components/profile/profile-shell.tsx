@@ -90,7 +90,7 @@ export function ProfileShell({ children, stats: counts }: { children: React.Reac
             {stats.map(({ label, value, Icon }) => (
               <div key={label} className="rounded-2xl bg-white/8 px-3 py-3 ring-1 ring-white/10 sm:min-w-32 sm:px-4">
                 <dt className="flex items-center gap-1.5 text-xs font-semibold text-ink-300">
-                  <Icon className="size-3.5 text-sun-400" /> {label}
+                  <Icon className="size-3.5 text-brand-400" /> {label}
                 </dt>
                 <dd className="mt-1 font-display text-3xl font-extrabold tabular">{value}</dd>
               </div>

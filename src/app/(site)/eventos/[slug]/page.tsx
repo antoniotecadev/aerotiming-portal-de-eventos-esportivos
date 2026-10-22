@@ -155,7 +155,7 @@ export default async function EventPage({ params }: Props) {
               </div>
 
               {!finished && days >= 0 && (
-                <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sun-400/50 bg-sun-400/10 p-4">
+                <div className="mt-6 flex items-center gap-3 rounded-2xl border border-sun-400/50 bg-brand-400/10 p-4">
                   <span className="font-display text-4xl leading-none font-extrabold text-ink-900">{days}</span>
                   <p className="text-[15px] text-ink-700">{days === 1 ? "dia" : "dias"} até à prova{open && event.distances.some((d) => d.totalSlots - d.slotsTaken < 300) && <> · <strong className="text-amber-800">algumas distâncias com poucas vagas</strong></>}</p>
                 </div>

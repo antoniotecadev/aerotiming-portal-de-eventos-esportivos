@@ -74,7 +74,7 @@ export function ProfileOverview({ registrations: regs, results, today }: { regis
                         <span className="font-display text-2xl font-extrabold">Hoje!</span>
                       ) : (
                         <>
-                          <span className="block font-display text-4xl leading-none font-extrabold text-sun-400 tabular">{d}</span>
+                          <span className="block font-display text-4xl leading-none font-extrabold text-brand-400 tabular">{d}</span>
                           <span className="text-xs font-semibold text-ink-300">{d === 1 ? "dia" : "dias"}</span>
                         </>
                       );

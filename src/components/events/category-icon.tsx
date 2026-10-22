@@ -18,9 +18,9 @@ export function CategoryIcon({ slug, className }: { slug: CategorySlug | "todas"
 /** Cor de fundo suave por categoria (chips e etiquetas). */
 export const CATEGORY_TONE: Record<CategorySlug, string> = {
   corrida: "bg-brand-50 text-brand-700",
-  caminhada: "bg-pink-50 text-pink-700",
-  ciclismo: "bg-emerald-50 text-emerald-700",
-  btt: "bg-lime-50 text-lime-800",
-  trail: "bg-amber-50 text-amber-800",
-  triatlo: "bg-sky-50 text-sky-700",
+  caminhada: "bg-brand-50 text-brand-700",
+  ciclismo: "bg-brand-50 text-brand-700",
+  btt: "bg-brand-50 text-brand-700",
+  trail: "bg-brand-50 text-brand-700",
+  triatlo: "bg-brand-50 text-brand-700",
 };

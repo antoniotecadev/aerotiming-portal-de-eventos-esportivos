@@ -28,7 +28,7 @@ export function TicketModal({ reg, open, onClose }: { reg: RegistrationWithEvent
       <div className="p-5 sm:p-6">
         <div className="overflow-hidden rounded-2xl border border-ink-200 bg-white">
           <div className="bg-ink-900 px-5 py-4 text-white">
-            <p className="text-xs font-bold tracking-wide text-sun-400 uppercase">{reg.distance?.name ?? "Inscrição"}</p>
+            <p className="text-xs font-bold tracking-wide text-brand-400 uppercase">{reg.distance?.name ?? "Inscrição"}</p>
             <p className="mt-0.5 text-lg leading-snug font-bold">{event.title}</p>
             <p className="mt-1 text-sm text-ink-300">
               {formatDate(event.date)} · {reg.distance?.startTime ?? event.startTime}

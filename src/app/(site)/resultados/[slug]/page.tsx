@@ -61,7 +61,7 @@ export default async function EventResultsPage({ params, searchParams }: { param
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold", CATEGORY_TONE[event.category])}>
                 <CategoryIcon slug={event.category} className="size-3.5" /> {event.categoryName ?? event.category}
               </span>
-              <p className="mt-2 text-sm font-bold tracking-wide text-sun-400 uppercase">Resultados oficiais</p>
+              <p className="mt-2 text-sm font-bold tracking-wide text-brand-400 uppercase">Resultados oficiais</p>
               <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-4xl">{event.title}</h1>
               <ul className="mt-3 space-y-1.5 text-[15px] text-ink-300">
                 <li className="flex items-center gap-2"><CalendarDays className="size-4 shrink-0 text-ink-400" />{formatDate(event.date)} · {event.startTime}</li>

@@ -30,9 +30,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Painel de imagem (só em ecrãs grandes) */}
       <aside className="relative hidden w-[46%] max-w-3xl overflow-hidden bg-ink-900 lg:block">
         <Image src="/images/eventos/maratona-noite.jpg" alt="" fill priority sizes="46vw" className="object-cover opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/50 to-ink-950/10" aria-hidden />
+        <div className="absolute inset-0 bg-linear-to-t from-ink-950 via-ink-950/50 to-ink-950/10" aria-hidden />
         <div className="absolute inset-x-0 bottom-0 p-10 text-white xl:p-14">
-          <p className="text-sm font-bold tracking-wide text-sun-400 uppercase">Cada quilómetro conta</p>
+          <p className="text-sm font-bold tracking-wide text-brand-400 uppercase">Cada quilómetro conta</p>
           <h2 className="mt-2 font-display text-5xl leading-[0.95] font-extrabold uppercase xl:text-6xl">
             A sua próxima meta
             <br />
@@ -41,7 +41,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           <ul className="mt-6 space-y-2.5 text-[15px] text-ink-100">
             {["Inscreva-se em minutos e pague com Multicaixa", "Receba o bilhete e o dorsal no telemóvel", "Veja os seus tempos logo após a prova"].map((t) => (
               <li key={t} className="flex items-center gap-2.5">
-                <CheckCircle2 className="size-5 shrink-0 text-sun-400" />
+                <CheckCircle2 className="size-5 shrink-0 text-brand-400" />
                 {t}
               </li>
             ))}

@@ -334,7 +334,7 @@ function CategoryChip({ active, onClick, slug, label }: { active: boolean; onCli
       aria-pressed={active}
       className={cn(
         "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-4 text-[15px] font-semibold transition-colors",
-        active ? "border-ink-900 bg-ink-900 text-white" : "border-ink-200 bg-white text-ink-700 hover:border-ink-300 hover:bg-ink-50",
+        active ? "border-brand-600 bg-brand-600 text-white" : "border-ink-200 bg-white text-ink-700 hover:border-ink-300 hover:bg-ink-50",
       )}
     >
       <CategoryIcon slug={slug} className="size-4" />
@@ -346,9 +346,9 @@ function CategoryChip({ active, onClick, slug, label }: { active: boolean; onCli
 function DateBlock({ iso }: { iso: string }) {
   const { day, month } = dateParts(iso);
   return (
-    <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-ink-900 text-white">
+    <div className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-brand-600 text-white">
       <span className="font-display text-2xl leading-none font-extrabold">{day}</span>
-      <span className="text-[11px] font-bold text-sun-400 uppercase">{month}</span>
+      <span className="text-[11px] font-bold text-ink-900 uppercase">{month}</span>
     </div>
   );
 }

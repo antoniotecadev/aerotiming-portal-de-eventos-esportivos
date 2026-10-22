@@ -434,11 +434,12 @@ async function seedRegistrations(adminId: string, athleteId: string) {
 // ───────────── Execução ─────────────
 
 async function main() {
-  // A base de dados de produção tem a marca site_settings.ambiente = "producao" (seed-producao.ts): nunca semear lá
+  // A base de dados de produção tem a marca site_settings.ambiente = "producao" (seed-producao.ts).
   const marca = await prisma.siteSetting.findUnique({ where: { key: "ambiente" } });
-  if (marca?.value === "producao") {
+  if (marca?.value === "producao" && process.env.SEED_DEMO_FORCE !== "1") {
     throw new Error("Esta base de dados é a de PRODUÇÃO (site_settings.ambiente). O seed de demonstração só corre numa base de desenvolvimento.");
   }
+  if (marca?.value === "producao") console.warn("⚠ SEED_DEMO_FORCE=1: a semear dados de demonstração numa base marcada como produção.");
   console.log("A semear a base de dados de desenvolvimento…");
   const { adminId, athleteId, organizerId } = await seedUsers();
   await seedCatalog();

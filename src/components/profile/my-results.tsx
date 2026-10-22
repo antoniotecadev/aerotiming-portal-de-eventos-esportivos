@@ -59,7 +59,7 @@ export function MyResults({ results }: { results: ResultWithEvent[] }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {pbs.map(([km, r]) => (
             <Card key={km} className="relative overflow-hidden p-5">
-              <Medal className="absolute -top-2 -right-2 size-20 text-sun-400/20" aria-hidden />
+              <Medal className="absolute -top-2 -right-2 size-20 text-brand-400/20" aria-hidden />
               <p className="text-sm font-bold tracking-wide text-brand-600 uppercase">{formatKm(km)}</p>
               <p className="mt-1 font-display text-4xl font-extrabold text-ink-900 tabular">{r.chipTime}</p>
               <p className="mt-1 truncate text-sm text-ink-500">

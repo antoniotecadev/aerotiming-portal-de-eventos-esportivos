@@ -51,11 +51,11 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -top-40 -right-40 size-130 rounded-full bg-brand-600/30 blur-3xl" aria-hidden />
         <div className="container-page relative grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.25fr_1fr] lg:py-20">
           <div className="min-w-0">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-sun-300 backdrop-blur">
+            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-brand-400 backdrop-blur">
               <Timer className="size-4" /> Cronometragem electrónica em todo o país
             </p>
             <h1 className="mt-5 text-4xl leading-[1.05] font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Encontre a sua próxima <span className="text-brand-400">prova</span> em Angola
+              Encontre a sua próxima <span className="text-brand-600">prova</span> em Angola
             </h1>
             <p className="mt-4 max-w-xl text-lg text-ink-300">
               Corridas, caminhadas, ciclismo e trail. Inscreva-se em minutos, pague com Multicaixa e veja o seu tempo logo após a meta.
@@ -73,7 +73,7 @@ export default async function HomePage() {
               <Image src={featured.poster} alt={`Cartaz: ${featured.title}`} width={1080} height={1528} sizes="384px" className="h-auto w-full transition-transform duration-500 group-hover:scale-[1.02]" priority />
             </div>
             <div className="absolute -bottom-5 -left-6 flex items-center gap-3 rounded-2xl bg-white p-3 pr-5 shadow-lift">
-              <div className="flex size-12 flex-col items-center justify-center rounded-xl bg-sun-400 text-ink-900">
+              <div className="flex size-12 flex-col items-center justify-center rounded-xl bg-brand-400 text-ink-900">
                 <span className="font-display text-xl leading-none font-extrabold">{days}</span>
                 <span className="text-[10px] font-bold uppercase">dias</span>
               </div>
@@ -165,7 +165,7 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-3 text-sm font-semibold text-ink-300">
             <span className="flex items-center gap-2"><ShieldCheck className="size-5 text-emerald-400" /> Pagamento seguro</span>
             <span className="flex items-center gap-2"><Smartphone className="size-5 text-sky-400" /> Bilhete no telemóvel</span>
-            <span className="flex items-center gap-2"><BadgeCheck className="size-5 text-sun-400" /> Resultados e certificado online</span>
+            <span className="flex items-center gap-2"><BadgeCheck className="size-5 text-brand-400" /> Resultados e certificado online</span>
           </div>
         </div>
       </section>
@@ -190,7 +190,7 @@ export default async function HomePage() {
                 <ol className="space-y-2">
                   {podium(g).map((r) => (
                     <li key={r.id} className="flex items-center gap-3 rounded-xl bg-white p-2.5 shadow-sm">
-                      <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold", r.positionGender === 1 ? "bg-sun-400 text-ink-900" : r.positionGender === 2 ? "bg-ink-200 text-ink-800" : "bg-amber-700/80 text-white")}>
+                      <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-extrabold", r.positionGender === 1 ? "bg-brand-400 text-ink-900" : r.positionGender === 2 ? "bg-ink-200 text-ink-800" : "bg-amber-700/80 text-white")}>
                         {r.positionGender}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{r.name}</span>
@@ -216,7 +216,7 @@ export default async function HomePage() {
       {/* CTA */}
       <section className="container-page py-14 sm:py-20">
         <div className="relative overflow-hidden rounded-3xl bg-brand-600 px-6 py-12 text-white sm:px-12">
-          <div className="pointer-events-none absolute -right-20 -bottom-24 size-80 rounded-full bg-sun-400/40 blur-2xl" aria-hidden />
+          <div className="pointer-events-none absolute -right-20 -bottom-24 size-80 rounded-full bg-brand-400/40 blur-2xl" aria-hidden />
           <div className="relative grid items-center gap-8 lg:grid-cols-[1.5fr_1fr]">
             <div>
               <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">Crie a sua conta grátis</h2>

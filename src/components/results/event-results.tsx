@@ -125,7 +125,7 @@ function ResultsPanel({ event, view }: { event: ResultsEventInfo; view: ResultsV
       {summary.finishers > 0 && (
         <section aria-labelledby="podio">
           <h2 id="podio" className="mb-4 flex items-center gap-2 text-xl font-extrabold text-ink-900">
-            <Medal className="size-6 text-sun-500" /> Pódio · {dist.name}
+            <Medal className="size-6 text-brandnd-500" /> Pódio · {dist.name}
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             {(["M", "F"] as Gender[]).map((g) => (
@@ -448,7 +448,7 @@ function CertificateModal({
       {r && (
         <div className="p-4 sm:p-6">
           <div className="relative overflow-hidden rounded-2xl border-[6px] border-double border-brand-500 bg-gradient-to-br from-white via-white to-brand-50 px-6 py-8 text-center sm:px-10 sm:py-10">
-            <div className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-sun-300/30" aria-hidden />
+            <div className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-brand-300/30" aria-hidden />
             <div className="pointer-events-none absolute -bottom-20 -left-20 size-56 rounded-full bg-brand-200/30" aria-hidden />
             <div className="relative">
               <p className="text-sm font-extrabold tracking-[0.3em] text-brand-600 uppercase">ConexãoSport</p>
@@ -478,7 +478,7 @@ function CertificateModal({
 function CertBox({ label, value, big }: { label: string; value: React.ReactNode; big?: boolean }) {
   return (
     <div className={cn("rounded-xl px-3 py-2", big ? "bg-ink-900 text-white" : "bg-white ring-1 ring-ink-200")}>
-      <p className={cn("text-[11px] font-semibold uppercase", big ? "text-sun-400" : "text-ink-500")}>{label}</p>
+      <p className={cn("text-[11px] font-semibold uppercase", big ? "text-brand-400" : "text-ink-500")}>{label}</p>
       <p className="tabular font-display text-2xl font-extrabold">{value}</p>
     </div>
   );
