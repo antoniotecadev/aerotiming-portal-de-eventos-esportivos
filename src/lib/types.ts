@@ -1,12 +1,6 @@
 // Modelos de dados do portal: contrato entre o servidor (src/server/mappers.ts, a partir da BD) e os componentes.
 
-export type CategorySlug =
-  | "corrida"
-  | "ciclismo"
-  | "trail"
-  | "triatlo"
-  | "caminhada"
-  | "btt";
+export type CategorySlug = string;
 
 export interface Category {
   slug: CategorySlug;

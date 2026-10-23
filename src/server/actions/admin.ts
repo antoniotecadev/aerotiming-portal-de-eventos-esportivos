@@ -34,6 +34,8 @@ export type AdminOp =
   | { type: "sponsor.save"; sponsor: Sponsor }
   | { type: "sponsor.remove"; id: string }
   | { type: "category.update"; slug: string; patch: Partial<Category> }
+  | { type: "category.create"; category: Category }
+  | { type: "category.remove"; slug: string }
   | { type: "settings.save"; settings: SiteSettings };
 
 export type AdminOpResult = { ok: true; message?: string } | { ok: false; error: string };
@@ -248,6 +250,25 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
         const invalidCategory = checkCategory(op.patch);
         if (invalidCategory) fail(invalidCategory);
         await prisma.category.update({ where: { slug: op.slug }, data: { name: op.patch.name, description: op.patch.description } });
+        return { ok: true };
+      }
+      case "category.create": {
+        adminOnly();
+        const c = op.category;
+        if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(c.slug) || c.slug.length > 60) fail("O endereço da categoria é inválido.");
+        const invalidCategory = checkCategory(c);
+        if (invalidCategory) fail(invalidCategory);
+        await prisma.category.create({ data: { slug: c.slug, name: c.name.trim(), description: c.description.trim() } });
+        await audit("category.create", "category", c.slug);
+        return { ok: true };
+      }
+      case "category.remove": {
+        adminOnly();
+        const category = await prisma.category.findUnique({ where: { slug: op.slug }, select: { _count: { select: { events: true } } } });
+        if (!category) fail("Categoria não encontrada.");
+        if (category._count.events > 0) fail("Não é possível eliminar uma categoria com eventos associados.");
+        await prisma.category.delete({ where: { slug: op.slug } });
+        await audit("category.delete", "category", op.slug);
         return { ok: true };
       }
       case "settings.save": {

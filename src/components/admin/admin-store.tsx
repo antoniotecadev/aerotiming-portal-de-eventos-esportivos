@@ -48,6 +48,8 @@ function opFor<K extends CollectionName>(name: K, item: Collections[K], isNew: b
       return { type: "banner.save", banner: item as Banner };
     case "sponsors":
       return { type: "sponsor.save", sponsor: item as Sponsor };
+    case "categories":
+      return isNew ? { type: "category.create", category: item as Category } : null;
     default:
       return null;
   }
@@ -104,6 +106,7 @@ export function AdminStoreProvider({ initial, children }: { initial: AdminData; 
         name === "events" ? { type: "event.remove", id }
         : name === "banners" ? { type: "banner.remove", id }
         : name === "sponsors" ? { type: "sponsor.remove", id }
+        : name === "categories" ? { type: "category.remove", slug: id }
         : null;
       void send(op);
     },
