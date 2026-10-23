@@ -265,7 +265,7 @@ export async function adminMutate(op: AdminOp): Promise<AdminOpResult> {
       case "category.remove": {
         adminOnly();
         const category = await prisma.category.findUnique({ where: { slug: op.slug }, select: { _count: { select: { events: true } } } });
-        if (!category) fail("Categoria não encontrada.");
+        if (!category) throw new Fail("Categoria não encontrada.");
         if (category._count.events > 0) fail("Não é possível eliminar uma categoria com eventos associados.");
         await prisma.category.delete({ where: { slug: op.slug } });
         await audit("category.delete", "category", op.slug);
